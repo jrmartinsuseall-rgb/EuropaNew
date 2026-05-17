@@ -1,0 +1,47 @@
+{% if titulos %}
+<div class="card form-card mb-3">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Cliente</th>
+          <th style="width:90px">Documento</th>
+          <th style="width:90px">Nº Banco</th>
+          <th style="width:95px">Vencimento</th>
+          <th style="width:105px" class="text-end">Valor</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in titulos %}
+        <tr class="{% if t.vencido %}table-warning{% endif %}">
+          <td class="text-muted small">{{ t.pk }}</td>
+          <td class="small">{{ t.cliente.razao|default:t.cliente.nome }}</td>
+          <td class="small font-monospace">{{ t.numerodoc|default:"—" }}</td>
+          <td class="small font-monospace">
+            {% if t.numerobanco %}
+              <span class="badge bg-info-subtle text-info-emphasis">{{ t.numerobanco }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="small {% if t.vencido %}text-danger fw-semibold{% endif %}">
+            {{ t.vencimento|date:"d/m/Y" }}
+          </td>
+          <td class="text-end small fw-semibold">R$ {{ t.valor|floatformat:2 }}</td>
+          <td>
+            <button type="button" class="btn btn-sm btn-success"
+              @click="abrirBaixa({{ t.pk }}, '{{ t.valor|floatformat:2 }}', '{{ t.cliente.razao|default:t.cliente.nome|escapejs }}', '{{ t.numerodoc|default:''|escapejs }}', '{{ t.vencimento|date:'d/m/Y' }}')">
+              <i class="bi bi-check2-circle"></i> Baixar
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% elif q %}
+<div class="text-center text-muted py-4">
+  <i class="bi bi-inbox fs-4 d-block mb-1"></i>Nenhum título em aberto para "{{ q }}".
+</div>
+{% endif %}

@@ -1,0 +1,172 @@
+{% extends "relatorios/base_pdf.html" %}
+
+{% block title %}Comprovante Acerto #{{ acerto.pk }}{% endblock %}
+{% block titulo %}Comprovante de Acerto de Comissão{% endblock %}
+{% block subtitulo %}Acerto #{{ acerto.pk }} &nbsp;|&nbsp; Emissão: {{ acerto.emissao|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid-5 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 6pt;
+    margin-bottom: 10pt;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 8pt;
+  }
+  .assinatura-area {
+    margin-top: 40pt;
+    display: grid;
+    grid-template-columns: 1fr 60pt 1fr;
+    gap: 20pt;
+    align-items: end;
+  }
+  .assinatura-bloco {
+    text-align: center;
+  }
+  .assinatura-linha {
+    border-top: 1px solid #212529;
+    padding-top: 4pt;
+    font-size: 8pt;
+  }
+  .assinatura-label {
+    font-size: 7pt;
+    color: #6c757d;
+    margin-top: 2pt;
+  }
+  .totais-box {
+    margin-top: 8pt;
+    border: 1.5px solid #198754;
+    border-radius: 3pt;
+    padding: 8pt 12pt;
+    display: flex;
+    justify-content: flex-end;
+    gap: 40pt;
+  }
+  .totais-box .tot-item label {
+    font-size: 7pt;
+    color: #6c757d;
+    text-transform: uppercase;
+  }
+  .totais-box .tot-item span {
+    font-size: 11pt;
+    font-weight: bold;
+  }
+  .tot-comissao span { color: #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Info do acerto ── #}
+<div class="info-grid-5">
+  <div class="info-item">
+    <label>Vendedor</label>
+    <span>{% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% else %}#{{ acerto.idvendrepre }}{% endif %}</span>
+  </div>
+  <div class="info-item">
+    <label>Nº Acerto</label>
+    <span>#{{ acerto.pk }}</span>
+  </div>
+  <div class="info-item">
+    <label>Emissão</label>
+    <span>{{ acerto.emissao|date:"d/m/Y" }}</span>
+  </div>
+  <div class="info-item">
+    <label>Período Inicial</label>
+    <span>{{ acerto.perildoini|date:"d/m/Y" }}</span>
+  </div>
+  <div class="info-item">
+    <label>Período Final</label>
+    <span>{{ acerto.periodofim|date:"d/m/Y" }}</span>
+  </div>
+</div>
+
+{# ── Tabela de movimentos ── #}
+<div class="secao">
+  <div class="secao-titulo">Movimentos</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50pt">Pedido</th>
+        <th>Cliente</th>
+        <th style="width:80pt">Identificação</th>
+        <th style="width:30pt" class="text-end">Qtd</th>
+        <th style="width:55pt" class="text-end">Vl. Unit.</th>
+        <th style="width:55pt" class="text-end">Vl. Total</th>
+        <th style="width:55pt" class="text-end">Base</th>
+        <th style="width:28pt" class="text-end">%</th>
+        <th style="width:58pt" class="text-end">Comissão</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in movimentos %}
+      <tr>
+        <td class="font-mono text-muted">#{{ m.pedido_id }}</td>
+        <td>{{ m.cliente.razao|default:m.cliente.nome|truncatechars:50 }}</td>
+        <td class="text-muted">{{ m.identificacao|default:"—" }}</td>
+        <td class="font-mono text-end">{{ m.quantidade|floatformat:0 }}</td>
+        <td class="font-mono text-end">{{ m.valorunitario|floatformat:2 }}</td>
+        <td class="font-mono text-end">{{ m.valortotal|floatformat:2 }}</td>
+        <td class="font-mono text-end">{{ m.basecomissao|floatformat:2 }}</td>
+        <td class="font-mono text-end">{{ m.perccomiss|floatformat:2 }}</td>
+        <td class="font-mono text-end fw-bold text-success">{{ m.valorcomiss|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" class="text-end text-muted">Totais</td>
+        <td class="font-mono text-end">{{ acerto.totalvendido|floatformat:2 }}</td>
+        <td class="font-mono text-end">{{ acerto.totalbase|floatformat:2 }}</td>
+        <td></td>
+        <td class="font-mono text-end text-success">{{ acerto.totalcomissao|floatformat:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{# ── Caixa de totais ── #}
+<div class="totais-box">
+  <div class="tot-item">
+    <label>Total Vendido</label><br>
+    <span class="font-mono">R$ {{ acerto.totalvendido|floatformat:2 }}</span>
+  </div>
+  <div class="tot-item">
+    <label>Base Comissão</label><br>
+    <span class="font-mono">R$ {{ acerto.totalbase|floatformat:2 }}</span>
+  </div>
+  <div class="tot-item tot-comissao">
+    <label>Total Comissão</label><br>
+    <span class="font-mono">R$ {{ acerto.totalcomissao|floatformat:2 }}</span>
+  </div>
+</div>
+
+{% if acerto.observacao %}
+<div style="margin-top:10pt; font-size:8pt; color:#6c757d;">
+  <strong>Observação:</strong> {{ acerto.observacao }}
+</div>
+{% endif %}
+
+{# ── Área de assinaturas ── #}
+<div class="assinatura-area">
+  <div class="assinatura-bloco">
+    <div class="assinatura-linha">
+      {{ empresa.razao }}
+    </div>
+    <div class="assinatura-label">Empresa — Responsável</div>
+  </div>
+  <div></div>
+  <div class="assinatura-bloco">
+    <div class="assinatura-linha">
+      {% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% endif %}
+    </div>
+    <div class="assinatura-label">
+      Vendedor
+      {% if vendedor and vendedor.cnpjcpf %}&nbsp;|&nbsp; CPF/CNPJ: {{ vendedor.cnpjcpf }}{% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

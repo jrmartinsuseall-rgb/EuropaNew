@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Configurações de Caixa{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Configurações de Caixa</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h5 class="mb-0 fw-semibold">
+    <i class="bi bi-safe2 me-2 text-success"></i>Configurações de Caixa
+  </h5>
+  <small class="text-muted">Parâmetros de caixa desta empresa</small>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="row g-4">
+
+    {# ── Coluna esquerda ─────────────────────────────────────── #}
+    <div class="col-lg-6">
+
+      {# Padrão para movimentação de recebimento #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-down-circle-fill" style="color:#20c997;"></i>
+          <span class="fw-semibold small">Padrão para movimentação de recebimento</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Conta</label>
+              {{ form.conta_recebimento }}
+              {% if form.conta_recebimento.errors %}
+                <div class="text-danger small mt-1">{{ form.conta_recebimento.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Conta CDC</label>
+              {{ form.subconta_recebimento }}
+              {% if form.subconta_recebimento.errors %}
+                <div class="text-danger small mt-1">{{ form.subconta_recebimento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Padrão para movimentação de pagamentos #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-up-circle-fill" style="color:#fd7e64;"></i>
+          <span class="fw-semibold small">Padrão para movimentação de pagamentos</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Conta</label>
+              {{ form.conta_pagamento }}
+              {% if form.conta_pagamento.errors %}
+                <div class="text-danger small mt-1">{{ form.conta_pagamento.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Conta CDC</label>
+              {{ form.subconta_pagamento }}
+              {% if form.subconta_pagamento.errors %}
+                <div class="text-danger small mt-1">{{ form.subconta_pagamento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Portadores de caixa #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-file-earmark-text text-secondary"></i>
+          <span class="fw-semibold small">Portador padrão de cheques em movimento de caixa</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Portador</label>
+              {{ form.portador_cheque }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Portador sangria</label>
+              {{ form.portador_sangria }}
+              <div class="form-text">Destino dos valores na sangria de caixa (ex.: Cofre).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /col-lg-6 #}
+
+    {# ── Coluna direita ──────────────────────────────────────── #}
+    <div class="col-lg-6">
+
+      {# Portadores por forma de pagamento #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-wallet2 text-primary"></i>
+          <span class="fw-semibold small">Portadores por forma de pagamento</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label d-flex align-items-center gap-1">
+                <i class="bi bi-cash text-success"></i> Dinheiro
+              </label>
+              {{ form.portador_dinheiro }}
+            </div>
+            <div class="col-12">
+              <label class="form-label d-flex align-items-center gap-1">
+                <i class="bi bi-credit-card text-primary"></i> Cartão Débito
+              </label>
+              {{ form.portador_cartao_deb }}
+            </div>
+            <div class="col-12">
+              <label class="form-label d-flex align-items-center gap-1">
+                <i class="bi bi-credit-card-2-front text-warning"></i> Cartão Crédito
+              </label>
+              {{ form.portador_cartao_cred }}
+            </div>
+            <div class="col-12">
+              <label class="form-label d-flex align-items-center gap-1">
+                <i class="bi bi-phone text-info"></i> PIX / TED
+              </label>
+              {{ form.portador_pix }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Banco padrão #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-bank text-secondary"></i>
+          <span class="fw-semibold small">Banco padrão</span>
+        </div>
+        <div class="card-body">
+          <label class="form-label">Banco / Conta</label>
+          {{ form.banco_padrao }}
+          <div class="form-text">Utilizado para fechamento e depósitos.</div>
+        </div>
+      </div>
+
+      {# Descrições padrão #}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header py-2 px-3 bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-tag text-secondary"></i>
+          <span class="fw-semibold small">Descrições padrão de lançamento</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">Entrada</label>
+              {{ form.desc_entrada }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Saída</label>
+              {{ form.desc_saida }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Sangria</label>
+              {{ form.desc_sangria }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Suprimento</label>
+              {{ form.desc_suprimento }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /col-lg-6 #}
+
+  </div>{# /row #}
+
+  <div class="d-flex justify-content-end mt-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Salvar Configurações
+    </button>
+  </div>
+
+</form>
+{% endblock %}

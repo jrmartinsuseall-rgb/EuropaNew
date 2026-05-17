@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Ordens de Serviço{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Ordens de Serviço</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-tools me-2 text-warning"></i>Ordens de Serviço</h5>
+  <a href="{% url 'servicos:os_create' %}" class="btn btn-sm btn-primary">
+    <i class="bi bi-plus-lg"></i> Nova OS
+  </a>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <select name="status" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
+          <option value="">Todos os status</option>
+          {% for val, lbl in status_choices %}
+          <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control"
+                 placeholder="Nº OS ou cliente...">
+        </div>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+        {% if q or status %}
+        <a href="{% url 'servicos:os_list' %}" class="btn btn-sm btn-outline-secondary ms-1">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card form-card">
+  {% if lista %}
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:90px">Nº OS</th>
+          <th>Cliente</th>
+          <th style="width:100px">Previsão</th>
+          <th style="width:80px">Período</th>
+          <th style="width:90px" class="text-end">Total</th>
+          <th style="width:80px" class="text-center">Status</th>
+          <th style="width:70px" class="text-center">Pedido</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for os in lista %}
+        <tr>
+          <td class="small font-monospace fw-semibold">{{ os.numero }}</td>
+          <td class="small">{{ os.cliente.razao|default:os.cliente.nome }}</td>
+          <td class="small">{% if os.dataprevisao %}{{ os.dataprevisao|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td class="small">{{ os.get_atend_periodo_display|default:"—" }}</td>
+          <td class="small text-end font-monospace">R$ {{ os.valortotal|floatformat:2 }}</td>
+          <td class="text-center">
+            <span class="badge
+              {% if os.status == 'A' %}bg-primary-subtle text-primary-emphasis
+              {% elif os.status == 'P' %}bg-warning-subtle text-warning-emphasis
+              {% elif os.status == 'R' %}bg-success-subtle text-success-emphasis
+              {% elif os.status == 'F' %}bg-info-subtle text-info-emphasis
+              {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+              {{ os.get_status_display }}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if os.idpedido %}
+            <a href="{% url 'vendas:pedido_detalhe' os.idpedido %}"
+               class="badge bg-info-subtle text-info-emphasis text-decoration-none small font-monospace"
+               title="Ver Pedido #{{ os.idpedido }}">
+              #{{ os.idpedido }}
+            </a>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'servicos:os_detalhe' os.pk %}" class="btn btn-xs btn-outline-secondary p-0 px-1">
+              <i class="bi bi-eye" style="font-size:.75rem;"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'partials/paginacao.html' %}
+  {% else %}
+  <div class="text-center text-muted py-4">
+    <i class="bi bi-tools d-block fs-3 mb-2"></i>Nenhuma OS encontrada.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

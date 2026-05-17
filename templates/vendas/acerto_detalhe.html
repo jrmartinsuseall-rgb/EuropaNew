@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Acerto #{{ acerto.pk }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'vendas:acerto_list' %}">Comissões</a></li>
+<li class="breadcrumb-item active">#{{ acerto.pk }}</li>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 small" role="alert">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-cash-coin me-2 text-success"></i>Acerto #{{ acerto.pk }}
+  </h5>
+  <div class="d-flex gap-2">
+    {% if not bloqueado %}
+    <form method="post" action="{% url 'vendas:acerto_calcular' acerto.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calculator me-1"></i>Calcular
+      </button>
+    </form>
+    {% if movimentos %}
+    <form method="post" action="{% url 'vendas:acerto_confirmar' acerto.pk %}"
+          onsubmit="return confirm('Confirma o acerto? Uma conta a pagar será gerada.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-check2-all me-1"></i>Confirmar
+      </button>
+    </form>
+    {% endif %}
+    <button type="button" class="btn btn-outline-danger btn-sm"
+            data-bs-toggle="modal" data-bs-target="#modalCancelar">
+      <i class="bi bi-x-circle me-1"></i>Cancelar
+    </button>
+    {% endif %}
+    {% if acerto.status == 'F' %}
+    <a href="{% url 'vendas:acerto_comprovante' acerto.pk %}" target="_blank"
+       class="btn btn-outline-dark btn-sm">
+      <i class="bi bi-printer me-1"></i>Comprovante
+    </a>
+    {% endif %}
+    <a href="{% url 'vendas:acerto_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Voltar
+    </a>
+  </div>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-3 small">
+      <div class="col-sm-4">
+        <span class="text-muted d-block">Vendedor</span>
+        <strong>{% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% else %}#{{ acerto.idvendrepre }}{% endif %}</strong>
+      </div>
+      <div class="col-sm-2">
+        <span class="text-muted d-block">Emissão</span>
+        <strong>{{ acerto.emissao|date:"d/m/Y"|default:"—" }}</strong>
+      </div>
+      <div class="col-sm-2">
+        <span class="text-muted d-block">Período Inicial</span>
+        <strong>{{ acerto.perildoini|date:"d/m/Y"|default:"—" }}</strong>
+      </div>
+      <div class="col-sm-2">
+        <span class="text-muted d-block">Período Final</span>
+        <strong>{{ acerto.periodofim|date:"d/m/Y"|default:"—" }}</strong>
+      </div>
+      <div class="col-sm-2">
+        <span class="text-muted d-block">Status</span>
+        {% if acerto.status == 'A' %}
+          <span class="badge bg-warning-subtle text-warning-emphasis">Aberto</span>
+        {% elif acerto.status == 'F' %}
+          <span class="badge bg-success-subtle text-success-emphasis">Finalizado</span>
+        {% else %}
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelado</span>
+        {% endif %}
+      </div>
+      {% if acerto.observacao %}
+      <div class="col-12">
+        <span class="text-muted d-block">Observação</span>
+        <span>{{ acerto.observacao }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span class="small fw-semibold text-muted">Movimentos</span>
+    {% if movimentos %}
+    <div class="d-flex gap-3 small">
+      <span>Total Vendido: <strong class="font-monospace">{{ acerto.totalvendido|floatformat:2 }}</strong></span>
+      <span>Base Comissão: <strong class="font-monospace">{{ acerto.totalbase|floatformat:2 }}</strong></span>
+      <span class="text-success">Total Comissão: <strong class="font-monospace">{{ acerto.totalcomissao|floatformat:2 }}</strong></span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px">Pedido</th>
+          <th>Cliente</th>
+          <th style="width:120px">Identificação</th>
+          <th style="width:65px" class="text-end">Qtd</th>
+          <th style="width:90px" class="text-end">Vl. Unit.</th>
+          <th style="width:90px" class="text-end">Vl. Total</th>
+          <th style="width:90px" class="text-end">Base</th>
+          <th style="width:55px" class="text-end">%</th>
+          <th style="width:90px" class="text-end">Comissão</th>
+          {% if not bloqueado %}<th style="width:34px"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimentos %}
+        <tr>
+          <td class="font-monospace text-muted align-middle">
+            <a href="{% url 'vendas:pedido_detalhe' m.pedido_id %}" class="text-decoration-none">
+              #{{ m.pedido_id }}
+            </a>
+          </td>
+          <td class="small align-middle">{{ m.cliente.razao|default:m.cliente.nome|truncatechars:35 }}</td>
+          <td class="small align-middle">{{ m.identificacao|default:"—" }}</td>
+          <td class="font-monospace text-end align-middle">{{ m.quantidade|floatformat:0 }}</td>
+          <td class="font-monospace text-end align-middle">{{ m.valorunitario|floatformat:2 }}</td>
+          <td class="font-monospace text-end align-middle">{{ m.valortotal|floatformat:2 }}</td>
+          <td class="font-monospace text-end align-middle">{{ m.basecomissao|floatformat:2 }}</td>
+          <td class="font-monospace text-end align-middle">{{ m.perccomiss|floatformat:2 }}</td>
+          <td class="font-monospace text-end align-middle fw-semibold text-success">{{ m.valorcomiss|floatformat:2 }}</td>
+          {% if not bloqueado %}
+          <td class="align-middle">
+            <form method="post"
+                  action="{% url 'vendas:acerto_remover_pedido' acerto.pk m.pedido_id %}"
+                  onsubmit="return confirm('Remover pedido #{{ m.pedido_id }} do acerto?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-xs btn-outline-danger p-0 px-1" title="Remover do acerto">
+                <i class="bi bi-x-lg" style="font-size:.75rem;"></i>
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if not bloqueado %}10{% else %}9{% endif %}" class="text-center text-muted py-4 small">
+            Nenhum movimento calculado.
+            {% if not bloqueado %}
+            Clique em <strong>Calcular</strong> para processar os pedidos do período.
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if movimentos %}
+      <tfoot class="table-light">
+        <tr>
+          <td colspan="{% if not bloqueado %}6{% else %}5{% endif %}" class="text-end small text-muted fw-semibold">Totais:</td>
+          <td class="font-monospace text-end fw-semibold">{{ acerto.totalvendido|floatformat:2 }}</td>
+          <td class="font-monospace text-end fw-semibold">{{ acerto.totalbase|floatformat:2 }}</td>
+          <td></td>
+          <td class="font-monospace text-end fw-semibold text-success">{{ acerto.totalcomissao|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{% if not bloqueado and sem_vendedor %}
+<div class="card form-card mb-3 border-warning">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center bg-warning-subtle">
+    <span class="small fw-semibold text-warning-emphasis">
+      <i class="bi bi-person-x me-1"></i>Pedidos instalados sem vendedor no período
+    </span>
+    <span class="badge bg-warning text-dark">{{ sem_vendedor|length }}</span>
+  </div>
+  <form method="post" action="{% url 'vendas:acerto_associar' acerto.pk %}">
+    {% csrf_token %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+        <thead class="table-light">
+          <tr>
+            <th style="width:34px">
+              <input type="checkbox" class="form-check-input" id="chk_all"
+                     onclick="document.querySelectorAll('.chk_ped').forEach(c=>c.checked=this.checked)">
+            </th>
+            <th style="width:70px">Pedido</th>
+            <th>Cliente</th>
+            <th style="width:110px">Instalação</th>
+            <th style="width:110px" class="text-end">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in sem_vendedor %}
+          <tr>
+            <td class="align-middle">
+              <input type="checkbox" name="pedidos_assoc" value="{{ p.pk }}"
+                     class="form-check-input chk_ped">
+            </td>
+            <td class="font-monospace text-muted align-middle">
+              <a href="{% url 'vendas:pedido_detalhe' p.pk %}" class="text-decoration-none">#{{ p.pk }}</a>
+            </td>
+            <td class="align-middle">{{ p.cliente.razao|default:p.cliente.nome|truncatechars:45 }}</td>
+            <td class="font-monospace align-middle">{{ p.datainstal|date:"d/m/Y"|default:"—" }}</td>
+            <td class="font-monospace text-end align-middle">{{ p.valortotal|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer py-2 d-flex justify-content-between align-items-center">
+      <small class="text-muted">Selecione os pedidos que pertencem a <strong>{% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% endif %}</strong></small>
+      <button type="submit" class="btn btn-warning btn-sm">
+        <i class="bi bi-person-check me-1"></i>Associar Selecionados
+      </button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% if not bloqueado %}
+<div class="modal fade" id="modalCancelar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title text-danger">
+          <i class="bi bi-exclamation-triangle me-1"></i>Cancelar Acerto
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        <p>Deseja cancelar o <strong>Acerto #{{ acerto.pk }}</strong>?</p>
+        <p class="text-muted mb-0">Os movimentos calculados serão removidos.</p>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+          Não cancelar
+        </button>
+        <form method="post" action="{% url 'vendas:acerto_cancelar' acerto.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-x-circle me-1"></i>Confirmar Cancelamento
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "relatorios/base_pdf.html" %}
+
+{% block title %}Contas a Pagar{% endblock %}
+{% block titulo %}Contas a Pagar{% endblock %}
+{% block subtitulo %}
+  {% if status_label %}{{ status_label }}{% endif %}
+  {% if q %} &nbsp;|&nbsp; Busca: "{{ q }}"{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  @page { size: A4 landscape; margin: 1.2cm 1.5cm 1.8cm 1.5cm; }
+  body  { font-size: 8pt; }
+  thead th { font-size: 7pt; }
+  tbody td { font-size: 7.5pt; padding: 3pt 4pt; }
+  tfoot td { font-size: 7.5pt; padding: 3pt 4pt; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Totalizadores ── #}
+<div style="display:flex; gap:24pt; margin-bottom:10pt;">
+  <div class="info-item">
+    <label>Registros</label>
+    <span>{{ titulos|length }}</span>
+  </div>
+  <div class="info-item">
+    <label>Total Valor</label>
+    <span class="font-mono">R$ {{ total_valor|floatformat:2 }}</span>
+  </div>
+  <div class="info-item">
+    <label>Total Juros</label>
+    <span class="font-mono" style="color:#dc3545;">R$ {{ total_juros|floatformat:2 }}</span>
+  </div>
+  <div class="info-item">
+    <label>Total Descontos</label>
+    <span class="font-mono" style="color:#198754;">R$ {{ total_descontos|floatformat:2 }}</span>
+  </div>
+  <div class="info-item">
+    <label>Total Pago</label>
+    <span class="font-mono">R$ {{ total_valorpago|floatformat:2 }}</span>
+  </div>
+  <div class="info-item">
+    <label>Saldo em Aberto</label>
+    <span class="font-mono fw-bold">R$ {{ saldo_aberto|floatformat:2 }}</span>
+  </div>
+</div>
+
+{# ── Tabela ── #}
+<div class="secao">
+  <div class="secao-titulo">Títulos</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28pt">#</th>
+        <th style="width:55pt">Documento</th>
+        <th>Fornecedor</th>
+        <th style="width:42pt" class="text-center">Emissão</th>
+        <th style="width:46pt" class="text-center">Vencimento</th>
+        <th style="width:46pt" class="text-center">Pagamento</th>
+        <th style="width:22pt" class="text-center">Parc.</th>
+        <th style="width:55pt" class="text-end">Valor</th>
+        <th style="width:45pt" class="text-end">Juros</th>
+        <th style="width:45pt" class="text-end">Desconto</th>
+        <th style="width:55pt" class="text-end">Pago</th>
+        <th style="width:55pt" class="text-end fw-bold">Saldo</th>
+        <th style="width:50pt" class="text-center">Situação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in titulos %}
+      <tr>
+        <td class="text-muted">{{ t.idcontapag }}</td>
+        <td class="font-mono">{{ t.numerodoc|default:"—" }}</td>
+        <td>{{ t.fornecedor.razao|default:t.fornecedor.nome|truncatechars:40 }}</td>
+        <td class="text-center">{{ t.data|date:"d/m/Y" }}</td>
+        <td class="text-center {% if t.status == 'A' and t.vencimento < hoje %}text-danger fw-bold{% endif %}">
+          {{ t.vencimento|date:"d/m/Y" }}
+        </td>
+        <td class="text-center text-muted">{{ t.pagamento|date:"d/m/Y"|default:"—" }}</td>
+        <td class="text-center">{{ t.parcela }}</td>
+        <td class="text-end font-mono">{{ t.valor|floatformat:2 }}</td>
+        <td class="text-end font-mono {% if t.juros > 0 %}text-danger{% endif %}">{{ t.juros|floatformat:2 }}</td>
+        <td class="text-end font-mono {% if t.descontos > 0 %}text-success{% endif %}">{{ t.descontos|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ t.valorpago|floatformat:2 }}</td>
+        <td class="text-end font-mono fw-bold">{{ t.valor|floatformat:2 }}</td>
+        <td class="text-center">
+          {% if t.status == 'A' %}
+            {% if t.vencimento < hoje %}
+              <span class="badge badge-danger">VENCIDO</span>
+            {% else %}
+              <span class="badge badge-info">ABERTO</span>
+            {% endif %}
+          {% elif t.status == 'B' %}
+            <span class="badge badge-success">BAIXADO</span>
+          {% elif t.status == 'P' %}
+            <span class="badge badge-warning">PARCIAL</span>
+          {% elif t.status == 'C' %}
+            <span class="badge badge-secondary">CANCEL.</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="13" class="text-center text-muted">Nenhum título encontrado.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if titulos %}
+    <tfoot>
+      <tr>
+        <td colspan="7" class="text-end text-muted">{{ titulos|length }} registro(s)</td>
+        <td class="text-end font-mono">{{ total_valor|floatformat:2 }}</td>
+        <td class="text-end font-mono text-danger">{{ total_juros|floatformat:2 }}</td>
+        <td class="text-end font-mono text-success">{{ total_descontos|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ total_valorpago|floatformat:2 }}</td>
+        <td class="text-end font-mono fw-bold">{{ saldo_aberto|floatformat:2 }}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+
+{% endblock %}

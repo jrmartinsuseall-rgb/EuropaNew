@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+{% block title %}Ficha — {{ cli.razao|default:cli.nome }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'servicos:crm_lookup' %}">CRM</a></li>
+<li class="breadcrumb-item active">{{ cli.razao|default:cli.nome|truncatechars:40 }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho da ficha ──────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row align-items-center g-2">
+      <div class="col">
+        <h5 class="mb-0 fw-bold">
+          {{ cli.razao|default:cli.nome }}
+          {% if cli.inativo %}
+            <span class="badge bg-secondary ms-2">Inativo</span>
+          {% endif %}
+          {% if inadimplente %}
+            <span class="badge bg-danger ms-1">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>Inadimplente
+            </span>
+          {% endif %}
+          {% if os_andamento %}
+            <span class="badge bg-warning text-dark ms-1">
+              <i class="bi bi-tools me-1"></i>OS em andamento
+            </span>
+          {% endif %}
+        </h5>
+        <div class="text-muted small mt-1">
+          <span class="me-3"><i class="bi bi-hash me-1"></i>{{ cli.idcliforemp }}</span>
+          {% if cli.cnpjcpf %}<span class="me-3"><i class="bi bi-card-text me-1"></i>{{ cli.cnpjcpf }}</span>{% endif %}
+          {% if cli.fone %}<span class="me-3"><i class="bi bi-telephone me-1"></i>{{ cli.fone }}</span>{% endif %}
+          {% if cli.celular %}<span class="me-3"><i class="bi bi-phone me-1"></i>{{ cli.celular }}</span>{% endif %}
+          {% if cli.email %}<span class="me-3"><i class="bi bi-envelope me-1"></i>{{ cli.email }}</span>{% endif %}
+        </div>
+        {% if cli.endereco %}
+        <div class="text-muted small d-flex align-items-center gap-2 flex-wrap">
+          <span>
+            <i class="bi bi-geo-alt me-1"></i>
+            {{ cli.endereco }}{% if cli.numero %}, {{ cli.numero }}{% endif %}
+            {% if cli.bairro %} — {{ cli.bairro }}{% endif %}
+            {% if cli.cidade %} — {{ cli.cidade }}{% endif %}
+          </span>
+          <a href="https://maps.google.com/?q={{ cli.endereco|urlencode }}{% if cli.numero %}+{{ cli.numero|urlencode }}{% endif %}{% if cli.bairro %}+{{ cli.bairro|urlencode }}{% endif %}{% if cli.cidade %}+{{ cli.cidade|urlencode }}{% endif %}{% if cli.cep %}+{{ cli.cep|urlencode }}{% endif %}"
+             target="_blank" rel="noopener"
+             class="badge bg-success-subtle text-success-emphasis text-decoration-none"
+             title="Abrir no Google Maps">
+            <i class="bi bi-map me-1"></i>Ver no Maps
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-auto d-flex gap-2">
+        <a href="{% url 'servicos:os_create_cli' cli.pk %}" class="btn btn-sm btn-warning">
+          <i class="bi bi-plus-lg me-1"></i> Nova OS
+        </a>
+        <a href="{% url 'cadastros:cliente_edit' cli.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-pencil"></i> Editar Cadastro
+        </a>
+        <a href="{% url 'servicos:crm_lookup' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  {# ── Coluna esquerda ─────────────────────────────────── #}
+  <div class="col-lg-8">
+
+    {# Contatos / Log de Atendimento #}
+    <div x-data="{ modalAberto: false, editPk: null, editData: {} }" class="card form-card mb-3">
+      <div class="card-header py-2 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-chat-left-text me-2 text-info"></i>Contatos / Atendimento</span>
+        <button class="btn btn-sm btn-primary" @click="modalAberto=true; editPk=null; editData={status:''}">
+          <i class="bi bi-plus-lg"></i> Novo
+        </button>
+      </div>
+
+      {# Lista de contatos #}
+      <div id="lista-contatos">
+        {% if contatos %}
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width:90px">Data</th>
+                <th>Descrição</th>
+                <th style="width:100px">Status</th>
+                <th style="width:95px">Próx. Contato</th>
+                <th style="width:60px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ct in contatos %}
+              <tr>
+                <td class="small">{{ ct.datacontato|date:"d/m/Y" }}</td>
+                <td class="small">
+                  {{ ct.descricao }}
+                  {% if ct.observacao %}
+                    <div class="text-muted" style="font-size:.75rem;">{{ ct.observacao|truncatechars:80 }}</div>
+                  {% endif %}
+                </td>
+                <td class="small">{{ ct.status|default:"—" }}</td>
+                <td class="small {% if ct.proximocontato and ct.proximocontato < hoje %}text-danger fw-semibold{% endif %}">
+                  {% if ct.proximocontato %}{{ ct.proximocontato|date:"d/m/Y" }}{% else %}—{% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary p-0 px-1" title="Editar"
+                      @click="modalAberto=true; editPk={{ ct.pk }};
+                              editData={
+                                datacontato:'{{ ct.datacontato|date:'Y-m-d' }}',
+                                descricao:'{{ ct.descricao|escapejs }}',
+                                status:'{{ ct.status|escapejs }}',
+                                proximocontato:'{{ ct.proximocontato|date:'Y-m-d'|default:'' }}',
+                                observacao:'{{ ct.observacao|escapejs }}'
+                              }">
+                      <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+                    </button>
+                    <form method="post" action="{% url 'servicos:contato_excluir' ct.pk %}"
+                          onsubmit="return confirm('Excluir este contato?')">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger p-0 px-1" title="Excluir">
+                        <i class="bi bi-trash" style="font-size:.75rem;"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3 small">
+          <i class="bi bi-chat-left-dots d-block fs-5 mb-1"></i>Nenhum contato registrado.
+        </div>
+        {% endif %}
+      </div>
+
+      {# Modal Novo/Editar contato #}
+      <div x-show="modalAberto" x-transition
+           class="modal-overlay" @click.self="modalAberto=false" style="display:none;">
+        <div class="modal-box">
+          <div class="modal-header-bar">
+            <span><i class="bi bi-chat-left-text me-2"></i>
+              <span x-text="editPk ? 'Editar Contato' : 'Novo Contato'"></span>
+            </span>
+            <button type="button" class="btn-close btn-close-white" @click="modalAberto=false"></button>
+          </div>
+          <div class="modal-body-inner">
+            <form method="post" action="{% url 'servicos:contato_salvar' cli.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="contato_pk" :value="editPk || ''">
+
+              <div class="row g-2 mb-2">
+                <div class="col-md-5">
+                  <label class="form-label small">{{ form_contato.datacontato.label }}</label>
+                  <input type="date" name="datacontato" class="form-control form-control-sm"
+                         :value="editData.datacontato || '{{ hoje|date:'Y-m-d' }}'">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small">{{ form_contato.status.label }}</label>
+                  <select name="status" class="form-select form-select-sm"
+                          x-model="editData.status">
+                    {% for val, label in form_contato.fields.status.choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small">{{ form_contato.proximocontato.label }}</label>
+                  <input type="date" name="proximocontato" class="form-control form-control-sm"
+                         :value="editData.proximocontato || ''">
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">{{ form_contato.descricao.label }}</label>
+                <input type="text" name="descricao" class="form-control form-control-sm"
+                       :value="editData.descricao || ''" maxlength="200" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small">{{ form_contato.observacao.label }}</label>
+                <textarea name="observacao" class="form-control form-control-sm" rows="2"
+                          x-text="editData.observacao || ''"></textarea>
+              </div>
+              <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-sm btn-secondary" @click="modalAberto=false">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary">
+                  <i class="bi bi-check-lg"></i> Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /card contatos #}
+
+    {# Telefones do Cliente #}
+    <div x-data="{ modalFone: false, editFonePk: null, editFone: {} }" class="card form-card mb-3">
+      <div class="card-header py-2 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-telephone-fill me-2 text-success"></i>Telefones</span>
+        <button class="btn btn-sm btn-primary"
+                @click="modalFone=true; editFonePk=null; editFone={identificacao:'Principal',relacao:'Titular'}">
+          <i class="bi bi-plus-lg"></i> Novo
+        </button>
+      </div>
+
+      {% if telefones %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Número</th>
+              <th style="width:110px">Identificação</th>
+              <th style="width:100px">Relação</th>
+              <th>Descrição</th>
+              <th style="width:60px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tf in telefones %}
+            <tr>
+              <td class="small font-monospace">{{ tf.numero|default:"—" }}</td>
+              <td class="small">{{ tf.identificacao|default:"—" }}</td>
+              <td class="small">{{ tf.relacao|default:"—" }}</td>
+              <td class="small text-muted">{{ tf.descricao|default:"" }}</td>
+              <td>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-outline-primary p-0 px-1" title="Editar"
+                    @click="modalFone=true; editFonePk={{ tf.pk }};
+                            editFone={
+                              numero:'{{ tf.numero|escapejs }}',
+                              identificacao:'{{ tf.identificacao|escapejs }}',
+                              relacao:'{{ tf.relacao|escapejs }}',
+                              descricao:'{{ tf.descricao|escapejs }}'
+                            }">
+                    <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+                  </button>
+                  <form method="post" action="{% url 'servicos:fone_excluir' tf.pk %}"
+                        onsubmit="return confirm('Excluir este telefone?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger p-0 px-1" title="Excluir">
+                      <i class="bi bi-trash" style="font-size:.75rem;"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-3 small">
+        <i class="bi bi-telephone d-block fs-5 mb-1"></i>Nenhum telefone cadastrado.
+      </div>
+      {% endif %}
+
+      {# Modal Novo/Editar telefone #}
+      <div x-show="modalFone" x-transition
+           class="modal-overlay" @click.self="modalFone=false" style="display:none;">
+        <div class="modal-box" style="max-width:480px;">
+          <div class="modal-header-bar">
+            <span><i class="bi bi-telephone me-2"></i>
+              <span x-text="editFonePk ? 'Editar Telefone' : 'Novo Telefone'"></span>
+            </span>
+            <button type="button" class="btn-close btn-close-white" @click="modalFone=false"></button>
+          </div>
+          <div class="modal-body-inner">
+            <form method="post" action="{% url 'servicos:fone_salvar' cli.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="fone_pk" :value="editFonePk || ''">
+
+              <div class="mb-2">
+                <label class="form-label small">Número</label>
+                <input type="text" name="numero" class="form-control form-control-sm"
+                       x-model="editFone.numero" maxlength="20">
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                  <label class="form-label small">Identificação</label>
+                  <select name="identificacao" class="form-select form-select-sm"
+                          x-model="editFone.identificacao">
+                    {% for val, lbl in form_fone.fields.identificacao.choices %}
+                    <option value="{{ val }}">{{ lbl }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Relação</label>
+                  <select name="relacao" class="form-select form-select-sm"
+                          x-model="editFone.relacao">
+                    {% for val, lbl in form_fone.fields.relacao.choices %}
+                    <option value="{{ val }}">{{ lbl }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small">Descrição</label>
+                <input type="text" name="descricao" class="form-control form-control-sm"
+                       x-model="editFone.descricao" maxlength="100">
+              </div>
+              <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-sm btn-secondary" @click="modalFone=false">Cancelar</button>
+                <button type="submit" class="btn btn-sm btn-primary">
+                  <i class="bi bi-check-lg"></i> Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /card telefones #}
+
+    {# Histórico de compras/OS #}
+    {% if historico %}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-clock-history me-2 text-success"></i>Histórico de Compras / OS</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Nº Gráfico</th>
+              <th style="width:90px">Data Venda</th>
+              <th style="width:90px">Instalação</th>
+              <th style="width:80px">Identif.</th>
+              <th>Descrição</th>
+              <th style="width:60px" class="text-end">Qtd</th>
+              <th style="width:80px" class="text-end">Vlr Unit.</th>
+              <th style="width:90px" class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in historico %}
+            <tr>
+              <td class="small font-monospace">{{ h.numeroped|default:"—" }}</td>
+              <td class="small">{% if h.datavenda %}{{ h.datavenda|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+              <td class="small">{% if h.datainstal %}{{ h.datainstal|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+              <td class="small font-monospace">{{ h.identificacao|default:"—" }}</td>
+              <td class="small">{{ h.descricao }}</td>
+              <td class="text-end small">{{ h.quantidade|floatformat:0 }}</td>
+              <td class="text-end small">{{ h.valorunit|floatformat:2 }}</td>
+              <td class="text-end small fw-semibold">{{ h.valortotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /col esquerda #}
+
+  {# ── Coluna direita ──────────────────────────────────── #}
+  <div class="col-lg-4">
+
+    {# Resumo #}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-info-circle me-2 text-primary"></i>Resumo</span>
+      </div>
+      <div class="card-body py-2">
+        {% if ultimo_hist %}
+        <div class="mb-1">
+          <span class="text-muted small">Último produto</span><br>
+          <span class="small fw-semibold">{{ ultimo_hist.descricao|truncatechars:50 }}</span>
+        </div>
+        <div class="mb-1">
+          <span class="text-muted small">Vendedor</span><br>
+          <span class="small">{{ ultimo_hist.vendedor|default:"—" }}</span>
+        </div>
+        <div class="mb-1">
+          <span class="text-muted small">Profissional</span><br>
+          <span class="small">{{ ultimo_hist.tecnico|default:"—" }}</span>
+        </div>
+        <div class="mb-1">
+          <span class="text-muted small">Última venda</span><br>
+          <span class="small">{% if ultimo_hist.ultimavenda %}{{ ultimo_hist.ultimavenda|date:"d/m/Y" }}{% elif ultimo_hist.datavenda %}{{ ultimo_hist.datavenda|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+        </div>
+        {% endif %}
+        <div class="mb-1">
+          <span class="text-muted small">Próx. contato</span><br>
+          <span class="small {% if proximo_contato and proximo_contato < hoje %}text-danger fw-semibold{% endif %}">
+            {% if proximo_contato %}{{ proximo_contato|date:"d/m/Y" }}{% else %}—{% endif %}
+          </span>
+        </div>
+        {% if cli.nomevendedor %}
+        <div class="mb-1">
+          <span class="text-muted small">Vendedor padrão</span><br>
+          <span class="small">{{ cli.nomevendedor }}</span>
+        </div>
+        {% endif %}
+        {% if cli.observacao %}
+        <hr class="my-2">
+        <div class="text-muted small">{{ cli.observacao|linebreaksbr }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Posição financeira #}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-cash-stack me-2 text-success"></i>Posição Financeira</span>
+      </div>
+      <div class="card-body py-2">
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="small text-muted">Títulos em aberto</span>
+          <span class="small fw-semibold">{{ cr_abertos.count }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="small text-muted">Títulos vencidos</span>
+          <span class="small fw-semibold {% if cr_vencidos.count %}text-danger{% endif %}">
+            {{ cr_vencidos.count }}
+          </span>
+        </div>
+        {% if cr_abertos %}
+        <div class="mt-2">
+          <div class="text-muted small mb-1">Próximos vencimentos:</div>
+          {% for cr in cr_abertos|slice:":5" %}
+          <div class="d-flex justify-content-between small {% if cr.vencido %}text-danger{% endif %}">
+            <span>{{ cr.vencimento|date:"d/m/Y" }}</span>
+            <span>R$ {{ cr.valor|floatformat:2 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-muted small text-center py-2">Sem títulos em aberto.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# OS em andamento #}
+    {% if os_lista %}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-tools me-2 text-warning"></i>Ordens de Serviço</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <tbody>
+            {% for os in os_lista %}
+            <tr>
+              <td class="small font-monospace">{{ os.numero|default:os.pk }}</td>
+              <td class="small">{{ os.dataprevisao|date:"d/m/Y"|default:"—" }}</td>
+              <td><span class="badge
+                {% if os.status == 'A' %}bg-primary-subtle text-primary-emphasis
+                {% elif os.status == 'P' %}bg-warning-subtle text-warning-emphasis
+                {% elif os.status == 'F' %}bg-success-subtle text-success-emphasis
+                {% elif os.status == 'C' %}bg-danger-subtle text-danger-emphasis
+                {% else %}bg-secondary-subtle text-secondary-emphasis{% endif %}">
+                {{ os.get_status_display }}</span>
+              </td>
+              <td class="text-end small">R$ {{ os.valortotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /col direita #}
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1050;
+}
+.modal-box {
+  background: #fff; border-radius: .5rem; width: 100%; max-width: 560px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+.modal-header-bar {
+  background: #343a40; color: #fff; padding: .75rem 1rem;
+  border-radius: .5rem .5rem 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body-inner { padding: 1.25rem; }
+</style>
+{% endblock %}

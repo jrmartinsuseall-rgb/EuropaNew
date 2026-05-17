@@ -1,0 +1,19 @@
+# Europa Python — Dependências
+# Gerado em 2026-04-13
+
+# Core
+Django==6.0.4
+python-decouple==3.8
+
+# Banco de Dados
+psycopg2==2.9.11
+
+# PDF / Relatórios
+weasyprint==68.1
+pillow==12.2.0
+
+# Utilitários
+python-dateutil==2.9.0.post0
+
+# Servidor de produção
+gunicorn==23.0.0

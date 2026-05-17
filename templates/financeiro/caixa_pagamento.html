@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Pagamento — Caixa{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:caixa' %}">Caixa</a></li>
+<li class="breadcrumb-item active">Pagamento</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>Pagamento — Caixa
+  </h5>
+  <a href="{% url 'financeiro:caixa' %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Voltar ao Caixa
+  </a>
+</div>
+
+<div x-data="{
+  sel: null,
+  abrirBaixa(pk, valor, fornecedor, doc, venc) {
+    this.sel = { pk, valor, fornecedor, doc, venc };
+    document.getElementById('pag-pk').value = pk;
+    document.getElementById('pag-valorpago').value = valor;
+  },
+  fechar() { this.sel = null; }
+}">
+
+{# Busca #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="search" name="q" value="{{ q }}" class="form-control"
+                 placeholder="Buscar por fornecedor ou Nº documento..."
+                 autocomplete="off"
+                 hx-get="{% url 'financeiro:caixa_pagamento_buscar' %}"
+                 hx-trigger="keyup changed delay:300ms, search"
+                 hx-target="#resultados-pag"
+                 hx-include="[name='q']">
+        </div>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Resultados #}
+<div id="resultados-pag">
+  {% include "financeiro/partials/caixa_pag_resultados.html" %}
+</div>
+
+{# Formulário de baixa (modal Alpine) #}
+<div x-show="sel !== null" x-transition
+     class="modal-overlay" @click.self="fechar()" style="display:none;">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header-bar" style="background:#dc3545;">
+      <span><i class="bi bi-arrow-up-circle-fill me-2"></i>Confirmar Pagamento</span>
+      <button type="button" class="btn-close btn-close-white" @click="fechar()"></button>
+    </div>
+    <div class="modal-body-inner">
+
+      <div class="alert alert-danger py-2 mb-3" x-show="sel">
+        <strong x-text="sel?.fornecedor"></strong><br>
+        <small>Doc: <span x-text="sel?.doc || '—'"></span>
+        &nbsp;|&nbsp; Venc: <span x-text="sel?.venc"></span>
+        &nbsp;|&nbsp; Valor: R$ <span x-text="sel?.valor"></span></small>
+      </div>
+
+      <form method="post" action="{% url 'financeiro:caixa_pagamento' %}{% if q %}?q={{ q }}{% endif %}">
+        {% csrf_token %}
+        <input type="hidden" name="contapag_pk" id="pag-pk">
+        <div class="row g-2 mb-2">
+          <div class="col-md-5">
+            <label class="form-label small">{{ form.metodo.label }}</label>
+            {{ form.metodo }}
+          </div>
+          <div class="col-md-7">
+            <label class="form-label small">{{ form.portador.label }}</label>
+            {{ form.portador }}
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label small">{{ form.data_pagamento.label }}</label>
+            {{ form.data_pagamento }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">{{ form.juros.label }}</label>
+            {{ form.juros }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">{{ form.descontos.label }}</label>
+            {{ form.descontos }}
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-5">
+            <label class="form-label small">{{ form.valorpago.label }}</label>
+            <input type="number" name="valorpago" id="pag-valorpago"
+                   class="form-control form-control-sm" step="0.01" min="0.01">
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+          <button type="button" class="btn btn-sm btn-secondary" @click="fechar()">Cancelar</button>
+          <button type="submit" class="btn btn-sm btn-danger">
+            <i class="bi bi-check-lg"></i> Confirmar Baixa
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+</div>{# /x-data #}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1050;
+}
+.modal-box {
+  background: #fff; border-radius: .5rem; width: 100%; max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+.modal-header-bar {
+  background: #343a40; color: #fff; padding: .75rem 1rem;
+  border-radius: .5rem .5rem 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body-inner { padding: 1.25rem; }
+</style>
+{% endblock %}

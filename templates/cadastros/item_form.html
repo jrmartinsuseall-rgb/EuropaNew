@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cadastros:item_list' %}">Itens</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+
+<div x-data="{ aba: 'principal' }">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+      <i class="bi bi-box-seam me-2 text-primary"></i>{{ titulo }}
+    </h5>
+    {% if objeto %}<span class="text-muted small">Registro #{{ objeto.pk }}</span>{% endif %}
+  </div>
+
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+
+    <div class="card form-card">
+
+      <!-- Cabeçalho fixo -->
+      <div class="card-header">
+        <div class="row g-2 align-items-end">
+
+          <div class="col-md-2">
+            <label class="form-label">Identificação</label>
+            {{ form.identificacao }}
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Descrição <span class="text-danger">*</span></label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+            <div class="text-danger small mt-1">{{ form.descricao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Modelo</label>
+            {{ form.modelo }}
+          </div>
+          <div class="col-md-1">
+            <label class="form-label">Unidade</label>
+            {{ form.unidade }}
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <div class="form-check mb-2">
+              {{ form.inativo }}
+              <label class="form-check-label" for="{{ form.inativo.id_for_label }}">Inativo</label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Abas -->
+      <div class="card-body p-0">
+        <ul class="nav nav-tabs px-3 pt-2 border-bottom">
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'principal' }" @click="aba = 'principal'">
+              <i class="bi bi-info-circle me-1"></i>Dados
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'precos' }" @click="aba = 'precos'">
+              <i class="bi bi-currency-dollar me-1"></i>Preços
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'estoque' }" @click="aba = 'estoque'">
+              <i class="bi bi-boxes me-1"></i>Estoque
+            </button>
+          </li>
+        </ul>
+
+        <div class="p-3">
+
+          <!-- Aba: Dados -->
+          <div x-show="aba === 'principal'" x-cloak>
+            <div class="row g-3">
+              {{ form.tipoitem }}
+              <div class="col-md-4">
+                <label class="form-label">Grupo</label>
+                {{ form.grupo }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                {{ form.tipo_item }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Cód. Fornecedor</label>
+                {{ form.codforn }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Cor Lista</label>
+                {{ form.corlista }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Preços -->
+          <div x-show="aba === 'precos'" x-cloak>
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Preço Base (R$)</label>
+                {{ form.precobase }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Base Comissão (R$)</label>
+                {{ form.basecomissao }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Tempo Troca (dias)</label>
+                {{ form.tempotroca }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Estoque -->
+          <div x-show="aba === 'estoque'" x-cloak>
+            <div class="row g-3 align-items-start">
+
+              <div class="col-md-2">
+                <label class="form-label">Saldo Estoque</label>
+                {{ form.saldoestoque }}
+                <small class="text-muted d-block mt-1">
+                  <i class="bi bi-info-circle"></i> Atualizado automaticamente pelos movimentos.
+                </small>
+              </div>
+
+              <div class="col-md-4 pt-4">
+                <div class="form-check form-switch mt-2">
+                  {{ form.controla_estoque }}
+                  <label class="form-check-label fw-semibold ms-1"
+                         for="{{ form.controla_estoque.id_for_label }}">
+                    Controla Estoque
+                  </label>
+                </div>
+                <small class="text-muted d-block mt-1">
+                  Quando marcado, o item gera <strong>movimentos de estoque</strong>
+                  (entradas e saídas na tabela de movimentação), participa de
+                  <strong>requisições</strong> e de <strong>inventários</strong>.<br>
+                  Deixe desmarcado para itens de consumo interno, patrimônio ou
+                  serviços que não devem ser rastreados em estoque.
+                </small>
+              </div>
+
+            </div>
+          </div>
+
+        </div><!-- /p-3 -->
+      </div><!-- /card-body -->
+
+      <div class="card-footer d-flex gap-2">
+        <button type="submit" name="salvar" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Salvar
+        </button>
+        <button type="submit" name="salvar_novo" class="btn btn-outline-primary">
+          <i class="bi bi-plus-lg"></i> Salvar e Novo
+        </button>
+        <a href="{% url 'cadastros:item_list' %}" class="btn btn-secondary ms-auto">
+          <i class="bi bi-x-lg"></i> Cancelar
+        </a>
+      </div>
+
+    </div><!-- /card -->
+  </form>
+
+</div><!-- /x-data -->
+{% endblock %}

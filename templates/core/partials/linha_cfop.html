@@ -1,0 +1,40 @@
+<tr id="cfop-{{ c.pk }}" class="{% if c.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ c.pk }}</td>
+  <td>
+    <a href="{% url 'core:cfop_edit' c.pk %}" class="text-decoration-none fw-semibold">
+      {{ c.descricao }}
+    </a>
+  </td>
+  <td>
+    {% if c.tipo == 'E' %}
+      <span class="badge bg-info-subtle text-info-emphasis">Entrada</span>
+    {% else %}
+      <span class="badge bg-warning-subtle text-warning-emphasis">Saída</span>
+    {% endif %}
+  </td>
+  <td>
+    {% if c.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'core:cfop_edit' c.pk %}"
+         class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button
+        class="btn btn-sm {% if c.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        title="{% if c.inativo %}Reativar{% else %}Inativar{% endif %}"
+        hx-post="{% url 'core:cfop_inativar' c.pk %}"
+        hx-target="#cfop-{{ c.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="{% if c.inativo %}Reativar?{% else %}Inativar?{% endif %}"
+      >
+        <i class="bi {% if c.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

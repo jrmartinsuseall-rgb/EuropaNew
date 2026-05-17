@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cadastros:metodo_list' %}">Métodos de Pagamento</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-lightning-charge me-2 text-primary"></i>{{ titulo }}</h5>
+  {% if objeto %}<span class="text-muted small">Registro #{{ objeto.pk }}</span>{% endif %}
+</div>
+
+<form method="post" autocomplete="off">
+  {% csrf_token %}
+  <div class="card form-card">
+    <div class="card-body">
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label">Descrição <span class="text-danger">*</span></label>
+          {{ form.descricao }}
+          {% if form.descricao.errors %}<div class="text-danger small mt-1">{{ form.descricao.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Sigla</label>
+          {{ form.sigla }}
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ form.movcaixa }}
+            <label class="form-check-label" for="{{ form.movcaixa.id_for_label }}">
+              Movimenta Caixa
+            </label>
+          </div>
+        </div>
+
+        <div class="col-md-10">
+          <label class="form-label">Mensagem</label>
+          {{ form.mensagem }}
+          <div class="form-text">Texto exibido ao operador ao selecionar este método.</div>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ form.inativo }}
+            <label class="form-check-label" for="{{ form.inativo.id_for_label }}">Inativo</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" name="salvar" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> Salvar
+      </button>
+      <button type="submit" name="salvar_novo" class="btn btn-outline-primary">
+        <i class="bi bi-plus-lg"></i> Salvar e Novo
+      </button>
+      <a href="{% url 'cadastros:metodo_list' %}" class="btn btn-secondary ms-auto">
+        <i class="bi bi-x-lg"></i> Cancelar
+      </a>
+    </div>
+  </div>
+</form>
+{% endblock %}

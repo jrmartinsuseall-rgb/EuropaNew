@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Saldo por Item{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Saldo por Item</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-bar-chart-steps me-2 text-warning"></i>Saldo por Item</h5>
+  <a href="{% url 'estoque:saldo_imprimir' %}"
+     id="btn-imprimir"
+     target="_blank"
+     class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-printer me-1"></i>Imprimir
+  </a>
+</div>
+
+{# ── Filtros ──────────────────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="search" id="filtro-q" name="q"
+                 class="form-control"
+                 placeholder="Buscar por descrição, código, modelo ou cód. fornecedor..."
+                 autocomplete="off"
+                 hx-get="{% url 'estoque:saldo_buscar' %}"
+                 hx-trigger="keyup changed delay:300ms, search"
+                 hx-target="#tabela-wrapper"
+                 hx-include="#filtro-grupo, #filtro-inativo"
+                 hx-indicator="#spinner">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select id="filtro-grupo" name="grupo"
+                class="form-select form-select-sm"
+                hx-get="{% url 'estoque:saldo_buscar' %}"
+                hx-trigger="change"
+                hx-target="#tabela-wrapper"
+                hx-include="#filtro-q, #filtro-inativo">
+          <option value="">Todos os grupos</option>
+          {% for g in grupos %}
+          <option value="{{ g.pk }}">{{ g.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <div class="form-check form-check-inline mb-0">
+          <input class="form-check-input" type="checkbox" id="filtro-inativo" name="inativo" value="1"
+                 hx-get="{% url 'estoque:saldo_buscar' %}"
+                 hx-trigger="change"
+                 hx-target="#tabela-wrapper"
+                 hx-include="#filtro-q, #filtro-grupo">
+          <label class="form-check-label small" for="filtro-inativo">Incluir inativos</label>
+        </div>
+      </div>
+      <div class="col-auto">
+        <span id="spinner" class="htmx-indicator spinner-border spinner-border-sm text-primary"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Tabela ───────────────────────────────────────────────────────────────── #}
+<div id="tabela-wrapper">
+  {% include "estoque/partials/tabela_saldo.html" %}
+</div>
+
+{# Atualiza link de impressão dinamicamente conforme filtros mudam #}
+<script>
+(function () {
+  function atualizarLinkImpressao() {
+    const q      = document.getElementById('filtro-q')?.value || '';
+    const grupo  = document.getElementById('filtro-grupo')?.value || '';
+    const inativo= document.getElementById('filtro-inativo')?.checked ? '1' : '';
+    const params = new URLSearchParams();
+    if (q)      params.set('q', q);
+    if (grupo)  params.set('grupo', grupo);
+    if (inativo)params.set('inativo', inativo);
+    const base = "{% url 'estoque:saldo_imprimir' %}";
+    document.getElementById('btn-imprimir').href = base + (params.toString() ? '?' + params.toString() : '');
+  }
+
+  document.addEventListener('htmx:afterRequest', atualizarLinkImpressao);
+  document.getElementById('filtro-inativo')?.addEventListener('change', atualizarLinkImpressao);
+})();
+</script>
+{% endblock %}

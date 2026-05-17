@@ -1,0 +1,29 @@
+<tr id="projeto-{{ p.pk }}">
+  <td class="text-muted small">{{ p.pk }}</td>
+  <td class="small font-monospace fw-semibold">{{ p.codigo }}</td>
+  <td class="small">{{ p.descricao }}</td>
+  <td class="small">{% if p.dataencerramento %}{{ p.dataencerramento|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+  <td>
+    <span class="badge {% if p.inativo %}bg-secondary{% else %}bg-success{% endif %}">
+      {% if p.inativo %}Inativo{% else %}Ativo{% endif %}
+    </span>
+  </td>
+  <td class="d-flex gap-1">
+    <a href="{% url 'core:projeto_orcamento' p.pk %}" class="btn btn-xs btn-outline-success p-0 px-1" title="Orçamento">
+      <i class="bi bi-graph-up-arrow" style="font-size:.75rem;"></i>
+    </a>
+    <a href="{% url 'core:projeto_edit' p.pk %}" class="btn btn-xs btn-outline-primary p-0 px-1" title="Editar">
+      <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+    </a>
+    <form method="post" action="{% url 'core:projeto_inativar' p.pk %}"
+          hx-post="{% url 'core:projeto_inativar' p.pk %}"
+          hx-target="#projeto-{{ p.pk }}"
+          hx-swap="outerHTML">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-xs {% if p.inativo %}btn-outline-success{% else %}btn-outline-secondary{% endif %} p-0 px-1"
+              title="{% if p.inativo %}Reativar{% else %}Inativar{% endif %}">
+        <i class="bi {% if p.inativo %}bi-toggle-off{% else %}bi-toggle-on{% endif %}" style="font-size:.75rem;"></i>
+      </button>
+    </form>
+  </td>
+</tr>

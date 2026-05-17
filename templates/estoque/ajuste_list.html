@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Ajustes de Estoque{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Ajustes de Estoque</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="mb-0">
+      <i class="bi bi-tools me-2 text-danger"></i>Ajustes de Estoque
+    </h5>
+    <small class="text-muted">Últimos 200 registros. Use para consulta e auditoria.</small>
+  </div>
+  <a href="{% url 'estoque:ajuste_create' %}" class="btn btn-danger btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Novo Ajuste
+  </a>
+</div>
+
+<div class="alert alert-warning-subtle border-warning-subtle py-2 small d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
+  <span>
+    Ajustes alteram o saldo diretamente. Prefira <strong>Inventário</strong> para correções em lote.
+    Use ajuste avulso apenas para correções pontuais devidamente justificadas.
+  </span>
+</div>
+
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:95px">Data</th>
+          <th style="width:55px" class="text-center">Tipo</th>
+          <th style="width:120px">Identificação</th>
+          <th>Descrição</th>
+          <th style="width:100px" class="text-end">Quantidade</th>
+          <th>Motivo</th>
+          <th style="width:90px" class="text-muted text-center">Usuário</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mov in lista %}
+        <tr>
+          <td class="font-monospace small text-muted">{{ mov.data|date:"d/m/Y" }}</td>
+          <td class="text-center">
+            {% if mov.ent_sai == 'E' %}
+              <span class="badge bg-success-subtle text-success-emphasis">Entrada</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger-emphasis">Saída</span>
+            {% endif %}
+          </td>
+          <td class="font-monospace small text-muted">{{ mov.identificacao|default:"—" }}</td>
+          <td class="small">{{ mov.item.descricao|default:mov.identificacao|truncatechars:55 }}</td>
+          <td class="text-end font-monospace fw-semibold
+            {% if mov.ent_sai == 'E' %}text-success{% else %}text-danger{% endif %}">
+            {% if mov.ent_sai == 'E' %}+{% else %}-{% endif %}{{ mov.quantidade|floatformat:3 }}
+          </td>
+          <td class="small text-muted">{{ mov.observacao|default:"—" }}</td>
+          <td class="text-center text-muted small">{{ mov.usuariologado }}</td>
+          <td>
+            <a href="{% url 'estoque:ajuste_espelho' mov.pk %}" target="_blank"
+               class="btn btn-xs btn-outline-secondary p-0 px-1" title="Espelho PDF">
+              <i class="bi bi-printer" style="font-size:.75rem;"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4 small">Nenhum ajuste registrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

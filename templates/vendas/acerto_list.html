@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Acertos de Comissão{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Comissões</li>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 small" role="alert">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-cash-coin me-2 text-success"></i>Acertos de Comissão
+  </h5>
+  <div class="d-flex gap-2">
+    <a href="{% url 'vendas:comissao_config' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-sliders me-1"></i>Configuração
+    </a>
+    <a href="{% url 'vendas:acerto_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Novo Acerto
+    </a>
+  </div>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label form-label-sm mb-0">Buscar vendedor</label>
+        <input type="text" name="q" value="{{ q }}" placeholder="Nome do vendedor"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label form-label-sm mb-0">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-search me-1"></i>Filtrar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Vendedor</th>
+          <th style="width:110px">Emissão</th>
+          <th style="width:110px">Período Ini.</th>
+          <th style="width:110px">Período Fim</th>
+          <th style="width:110px" class="text-end">Total Comis.</th>
+          <th style="width:100px" class="text-center">Status</th>
+          <th style="width:34px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in acertos %}
+        <tr>
+          <td class="font-monospace text-muted align-middle">{{ row.obj.pk }}</td>
+          <td class="align-middle">{{ row.vendedor }}</td>
+          <td class="font-monospace align-middle">{{ row.obj.emissao|date:"d/m/Y"|default:"—" }}</td>
+          <td class="font-monospace align-middle">{{ row.obj.perildoini|date:"d/m/Y"|default:"—" }}</td>
+          <td class="font-monospace align-middle">{{ row.obj.periodofim|date:"d/m/Y"|default:"—" }}</td>
+          <td class="font-monospace text-end align-middle">{{ row.obj.totalcomissao|floatformat:2 }}</td>
+          <td class="text-center align-middle">
+            {% if row.obj.status == 'A' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis">Aberto</span>
+            {% elif row.obj.status == 'F' %}
+              <span class="badge bg-success-subtle text-success-emphasis">Finalizado</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelado</span>
+            {% endif %}
+          </td>
+          <td class="align-middle">
+            <a href="{% url 'vendas:acerto_detalhe' row.obj.pk %}"
+               class="btn btn-xs btn-outline-secondary p-0 px-1" title="Ver">
+              <i class="bi bi-eye" style="font-size:.8rem;"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4 small">Nenhum acerto encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

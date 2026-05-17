@@ -1,0 +1,140 @@
+{% extends "relatorios/base_pdf.html" %}
+
+{% block title %}Fechamento de Caixa — {{ sessao.dataabre|date:"d/m/Y" }}{% endblock %}
+{% block titulo %}Fechamento de Caixa{% endblock %}
+{% block subtitulo %}{{ sessao.dataabre|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+
+{# ── Dados da sessão ── #}
+<div class="info-grid">
+  <div class="info-item">
+    <label>Operador</label>
+    <span>{{ sessao.usuabre }}</span>
+  </div>
+  <div class="info-item">
+    <label>Abertura</label>
+    <span>{{ sessao.dataabre|date:"d/m/Y" }} {{ sessao.horaabre }}</span>
+  </div>
+  <div class="info-item">
+    <label>Fechamento</label>
+    <span>{% if sessao.datafecha %}{{ sessao.datafecha|date:"d/m/Y" }} {{ sessao.horafecha }}{% else %}Em aberto{% endif %}</span>
+  </div>
+</div>
+
+{# ── Movimentos ── #}
+<div class="secao">
+  <div class="secao-titulo">Movimentos da Sessão</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30pt">#</th>
+        <th style="width:36pt">Data</th>
+        <th>Descrição</th>
+        <th style="width:70pt">Tipo</th>
+        <th style="width:50pt">Conta</th>
+        <th style="width:55pt">Projeto</th>
+        <th style="width:22pt" class="text-center">D/C</th>
+        <th style="width:65pt" class="text-end">Valor</th>
+        <th style="width:65pt" class="text-end">Saldo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in movimentos %}
+      <tr {% if m.status == 'C' %}style="color:#adb5bd; text-decoration:line-through;"{% endif %}>
+        <td class="text-muted">{{ m.pk }}</td>
+        <td>{{ m.data|date:"d/m" }}</td>
+        <td>{{ m.descricao|truncatechars:55 }}</td>
+        <td>
+          {% if m.tipobaixa == 'ABERTURA' or m.tipobaixa == 'REABERTURA' %}
+            <span class="badge badge-dark">{{ m.tipobaixa }}</span>
+          {% elif m.tipobaixa == 'FECHAMENTO' %}
+            <span class="badge badge-secondary">{{ m.tipobaixa }}</span>
+          {% elif m.tipobaixa == 'ENTRADA' or m.tipobaixa == 'RECEBIMENTO' %}
+            <span class="badge badge-success">{{ m.tipobaixa }}</span>
+          {% elif m.tipobaixa == 'SAIDA' or m.tipobaixa == 'PAGAMENTO' %}
+            <span class="badge badge-danger">{{ m.tipobaixa }}</span>
+          {% elif m.tipobaixa == 'SANGRIA' %}
+            <span class="badge badge-warning">{{ m.tipobaixa }}</span>
+          {% elif m.tipobaixa == 'CANCELAMENTO' %}
+            <span class="badge badge-secondary">CANCEL.</span>
+          {% else %}
+            <span class="badge badge-secondary">{{ m.tipobaixa }}</span>
+          {% endif %}
+        </td>
+        <td class="text-muted" style="font-size:7pt;">{{ m.conta.descricao|default:"—"|truncatechars:18 }}</td>
+        <td style="font-size:7pt;">{% if m.projeto %}<span class="badge badge-info">{{ m.projeto.codigo }}</span>{% else %}—{% endif %}</td>
+        <td class="text-center fw-bold {% if m.tipo == 'E' %}text-success{% else %}text-danger{% endif %}">{{ m.tipo }}</td>
+        <td class="text-end font-mono {% if m.tipo == 'E' %}text-success{% else %}text-danger{% endif %}">
+          {% if m.tipo == 'E' %}+{% else %}-{% endif %}{{ m.valor|floatformat:2 }}
+        </td>
+        <td class="text-end font-mono fw-bold">{{ m.saldo|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Resumo por tipo ── #}
+<div class="secao" style="margin-top:12pt;">
+  <div class="secao-titulo">Resumo por Tipo</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th class="text-end">Créditos</th>
+        <th class="text-end">Débitos</th>
+        <th class="text-end">Resultado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resumo %}
+      <tr>
+        <td>{{ r.tipobaixa }}</td>
+        <td class="text-end font-mono text-success">{% if r.creditos %}{{ r.creditos|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="text-end font-mono text-danger">{% if r.debitos %}{{ r.debitos|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="text-end font-mono fw-bold {% if r.saldo >= 0 %}text-success{% else %}text-danger{% endif %}">{{ r.saldo|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>TOTAL</td>
+        <td class="text-end font-mono text-success">{{ total_creditos|floatformat:2 }}</td>
+        <td class="text-end font-mono text-danger">{{ total_debitos|floatformat:2 }}</td>
+        <td class="text-end font-mono {% if saldo_final >= 0 %}text-success{% else %}text-danger{% endif %}">
+          R$ {{ saldo_final|floatformat:2 }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{# ── Resumo por projeto ── #}
+{% if resumo_projetos %}
+<div class="secao" style="margin-top:12pt;">
+  <div class="secao-titulo">Classificação por Projeto</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Projeto</th>
+        <th class="text-end">Receitas</th>
+        <th class="text-end">Despesas</th>
+        <th class="text-end">Resultado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in resumo_projetos %}
+      <tr>
+        <td>{% if r.codigo %}<span class="badge badge-info">{{ r.codigo }}</span> {{ r.descricao }}{% else %}<span class="text-muted">Sem projeto</span>{% endif %}</td>
+        <td class="text-end font-mono text-success">{% if r.creditos %}{{ r.creditos|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="text-end font-mono text-danger">{% if r.debitos %}{{ r.debitos|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="text-end font-mono fw-bold {% if r.saldo >= 0 %}text-success{% else %}text-danger{% endif %}">{{ r.saldo|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

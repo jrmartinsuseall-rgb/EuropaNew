@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}Geração de Boletos{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:contarec_list' %}">Contas a Receber</a></li>
+<li class="breadcrumb-item active">Geração de Boletos</li>
+{% endblock %}
+
+{% block content %}
+
+{# Alpine: controla seleção de checkboxes e exibe contador #}
+<div x-data="boletosCtrl()" x-init="init()">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-upc-scan me-2 text-success"></i>Geração de Boletos
+    </h5>
+    <small class="text-muted">Títulos Abertos sem numeração bancária</small>
+  </div>
+
+  {# ── Painel de parâmetros e ação ──────────────────────── #}
+  <form method="post" action="{% url 'financeiro:boletos_gerar' %}" id="form-boletos">
+    {% csrf_token %}
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Banco <span class="text-danger">*</span></label>
+            <select name="banco" class="form-select form-select-sm" required
+                    @change="bancoId = $event.target.value">
+              <option value="">— Selecione o banco —</option>
+              {% for b in bancos %}
+              <option value="{{ b.pk }}"
+                {% if banco_sel and banco_sel.pk == b.pk %}selected{% endif %}>
+                {{ b.numero }} — {{ b.descricao }}
+                {% if b.numeroboleto %}(Próx.: {{ b.numeroboleto }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Portador</label>
+            <select name="portador" class="form-select form-select-sm">
+              <option value="">— não definido —</option>
+              {% for p in portadores %}
+              <option value="{{ p.pk }}"
+                {% if portador_sel and portador_sel.pk == p.pk %}selected{% endif %}>
+                {{ p.descricao }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit"
+                    class="btn btn-success btn-sm flex-grow-1"
+                    :disabled="selecionados.length === 0 || !bancoId"
+                    @click.prevent="confirmarGeracao()">
+              <i class="bi bi-upc-scan me-1"></i>
+              Gerar <span x-show="selecionados.length > 0" x-text="'(' + selecionados.length + ')'"></span> Boleto(s)
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Barra de seleção e busca ─────────────────────────── #}
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <div class="d-flex align-items-center gap-2">
+        <input type="checkbox" class="form-check-input" id="selAll"
+               @change="toggleAll($event.target.checked)">
+        <label for="selAll" class="form-check-label small text-muted">Selecionar todos</label>
+      </div>
+      <span class="text-muted small" x-show="selecionados.length > 0">
+        <span x-text="selecionados.length"></span> selecionado(s)
+      </span>
+      <div class="ms-auto" style="max-width:300px;">
+        <input type="search" class="form-control form-control-sm"
+               placeholder="Buscar cliente ou documento…"
+               x-model="busca"
+               autocomplete="off">
+      </div>
+    </div>
+
+    {# ── Tabela de títulos elegíveis ──────────────────────── #}
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th style="width:40px;"></th>
+            <th class="small">#</th>
+            <th class="small">Documento</th>
+            <th>Cliente</th>
+            <th class="small">Vencimento</th>
+            <th class="text-center small">Parc.</th>
+            <th class="text-end small">Valor</th>
+            <th class="small">Banco atual</th>
+            <th class="small">Portador atual</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in titulos %}
+          <tr :class="{ 'table-success': selecionados.includes('{{ t.pk }}') }"
+              x-show="filtrando('{{ t.cliente.razao|default:t.cliente.nome }}', '{{ t.numerodoc }}')"
+              @click="toggleItem('{{ t.pk }}')">
+            <td @click.stop>
+              <input type="checkbox"
+                     name="selecionados"
+                     value="{{ t.pk }}"
+                     class="form-check-input"
+                     :checked="selecionados.includes('{{ t.pk }}')"
+                     @change="onCheck($event, '{{ t.pk }}')">
+            </td>
+            <td class="text-muted small">{{ t.pk }}</td>
+            <td class="small font-monospace">{{ t.numerodoc|default:"—" }}</td>
+            <td class="fw-semibold small">{{ t.cliente.razao|default:t.cliente.nome }}</td>
+            <td class="small {% if t.vencido %}text-danger fw-semibold{% endif %}">
+              {{ t.vencimento|date:"d/m/Y" }}
+              {% if t.vencido %}<i class="bi bi-exclamation-triangle-fill ms-1"></i>{% endif %}
+            </td>
+            <td class="text-center small">{{ t.parcela }}</td>
+            <td class="text-end fw-semibold">R$ {{ t.valor|floatformat:2 }}</td>
+            <td class="small text-muted">{{ t.banco|default:"—" }}</td>
+            <td class="small text-muted">{{ t.portador|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-5">
+              <i class="bi bi-check2-circle fs-3 d-block mb-2 text-success"></i>
+              Nenhum título elegível encontrado.<br>
+              <small>Todos os títulos abertos já possuem numeração bancária.</small>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Campos hidden para os selecionados (Alpine mantém em sync) #}
+    {# Os checkboxes name="selecionados" já fazem o trabalho no POST #}
+
+  </form>
+
+  {# ── Rodapé informativo ───────────────────────────────── #}
+  {% if titulos %}
+  <div class="text-muted small mt-2 text-end">
+    {{ titulos|length }} título(s) elegível(is) para geração
+  </div>
+  {% endif %}
+
+</div>{# /x-data #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function boletosCtrl() {
+  return {
+    selecionados: [],
+    bancoId: '{{ banco_sel.pk|default:"" }}',
+    busca: '',
+
+    init() {
+      // Nada a pre-selecionar
+    },
+
+    toggleAll(checked) {
+      const cbs = document.querySelectorAll('input[name="selecionados"]');
+      this.selecionados = [];
+      cbs.forEach(cb => {
+        cb.checked = checked;
+        if (checked) this.selecionados.push(cb.value);
+      });
+    },
+
+    onCheck(event, pk) {
+      if (event.target.checked) {
+        if (!this.selecionados.includes(pk)) this.selecionados.push(pk);
+      } else {
+        this.selecionados = this.selecionados.filter(x => x !== pk);
+      }
+    },
+
+    toggleItem(pk) {
+      const cb = document.querySelector(`input[name="selecionados"][value="${pk}"]`);
+      if (!cb) return;
+      cb.checked = !cb.checked;
+      this.onCheck({ target: cb }, pk);
+    },
+
+    filtrando(cliente, doc) {
+      if (!this.busca) return true;
+      const q = this.busca.toLowerCase();
+      return cliente.toLowerCase().includes(q) || doc.toLowerCase().includes(q);
+    },
+
+    confirmarGeracao() {
+      if (this.selecionados.length === 0 || !this.bancoId) return;
+      const msg = `Gerar boletos para ${this.selecionados.length} título(s) selecionado(s)?`;
+      if (confirm(msg)) {
+        document.getElementById('form-boletos').submit();
+      }
+    },
+  }
+}
+</script>
+{% endblock %}

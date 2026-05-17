@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Relatório{% endblock %}</title>
+  <style>
+    /* ── Reset e base ─────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 9pt;
+      color: #212529;
+      background: #fff;
+    }
+
+    /* ── Página ───────────────────────────────────── */
+    @page {
+      size: A4;
+      margin: 1.5cm 1.5cm 2cm 1.5cm;
+      @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 7pt;
+        color: #6c757d;
+      }
+    }
+
+    /* ── Cabeçalho ────────────────────────────────── */
+    .pdf-header {
+      border-bottom: 2px solid #212529;
+      padding-bottom: 6pt;
+      margin-bottom: 10pt;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .pdf-header .empresa-nome {
+      font-size: 13pt;
+      font-weight: bold;
+    }
+    .pdf-header .empresa-info {
+      font-size: 7.5pt;
+      color: #6c757d;
+      margin-top: 2pt;
+    }
+    .pdf-header .relatorio-titulo {
+      text-align: right;
+    }
+    .pdf-header .relatorio-titulo h2 {
+      font-size: 11pt;
+      font-weight: bold;
+    }
+    .pdf-header .relatorio-titulo .subtitulo {
+      font-size: 7.5pt;
+      color: #6c757d;
+    }
+
+    /* ── Rodapé de emissão ────────────────────────── */
+    .pdf-footer-emissao {
+      border-top: 1px solid #dee2e6;
+      margin-top: 10pt;
+      padding-top: 4pt;
+      font-size: 7pt;
+      color: #6c757d;
+      text-align: right;
+    }
+
+    /* ── Seção / card ─────────────────────────────── */
+    .secao {
+      margin-bottom: 12pt;
+    }
+    .secao-titulo {
+      background: #212529;
+      color: #fff;
+      font-size: 8pt;
+      font-weight: bold;
+      padding: 3pt 6pt;
+      margin-bottom: 0;
+      text-transform: uppercase;
+      letter-spacing: .5pt;
+    }
+
+    /* ── Tabela ───────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+    }
+    thead th {
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      padding: 4pt 5pt;
+      font-weight: bold;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: .3pt;
+    }
+    tbody td {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 3.5pt 5pt;
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tfoot td {
+      border-top: 1.5px solid #dee2e6;
+      padding: 4pt 5pt;
+      font-weight: bold;
+      background: #f8f9fa;
+    }
+
+    /* ── Utilitários ──────────────────────────────── */
+    .text-end   { text-align: right; }
+    .text-center{ text-align: center; }
+    .text-muted { color: #6c757d; }
+    .fw-bold    { font-weight: bold; }
+    .font-mono  { font-family: 'Courier New', Courier, monospace; }
+    .text-success { color: #198754; }
+    .text-danger  { color: #dc3545; }
+    .badge {
+      display: inline-block;
+      padding: 1.5pt 4pt;
+      border-radius: 3pt;
+      font-size: 7pt;
+      font-weight: bold;
+    }
+    .badge-dark    { background: #212529; color: #fff; }
+    .badge-success { background: #d1e7dd; color: #0f5132; }
+    .badge-danger  { background: #f8d7da; color: #842029; }
+    .badge-warning { background: #fff3cd; color: #664d03; }
+    .badge-info    { background: #cff4fc; color: #055160; }
+    .badge-secondary { background: #e2e3e5; color: #41464b; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6pt;
+      margin-bottom: 10pt;
+    }
+    .info-item label {
+      display: block;
+      font-size: 7pt;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: .3pt;
+    }
+    .info-item span {
+      font-size: 9pt;
+      font-weight: bold;
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  {# ── Cabeçalho da empresa ── #}
+  <div class="pdf-header">
+    <div>
+      <div class="empresa-nome">{{ empresa.razao }}</div>
+      <div class="empresa-info">
+        {% if empresa.cnpj %}CNPJ: {{ empresa.cnpj }}{% endif %}
+        {% if empresa.fone %} &nbsp;|&nbsp; Fone: {{ empresa.fone }}{% endif %}
+        {% if empresa.email %} &nbsp;|&nbsp; {{ empresa.email }}{% endif %}
+      </div>
+    </div>
+    <div class="relatorio-titulo">
+      <h2>{% block titulo %}Relatório{% endblock %}</h2>
+      <div class="subtitulo">{% block subtitulo %}{% endblock %}</div>
+    </div>
+  </div>
+
+  {# ── Conteúdo ── #}
+  {% block content %}{% endblock %}
+
+  {# ── Rodapé de emissão ── #}
+  <div class="pdf-footer-emissao">
+    Emitido em {{ now|date:"d/m/Y H:i" }} por {{ usuario }}
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-br" x-data>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Europa — {% block title %}{% endblock %}</title>
+
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Europa CSS -->
+  <link href="/static/css/europa.css" rel="stylesheet">
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-light">
+
+<div class="d-flex" style="min-height: 100vh;">
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <nav class="sidebar d-flex flex-column bg-dark text-white p-0" style="width:220px; min-height:100vh; flex-shrink:0;">
+
+    <div class="px-3 py-3 border-bottom border-secondary">
+      <span class="fw-bold fs-5 text-white">
+        <i class="bi bi-globe2 text-primary"></i> Europa
+      </span>
+      {% if empresa_atual %}
+      <div class="text-truncate mt-1" style="font-size:.72rem; color:#6c757d; max-width:196px;" title="{{ empresa_atual.razao }}">
+        <i class="bi bi-building me-1"></i>{{ empresa_atual.razao }}
+      </div>
+      {% endif %}
+    </div>
+
+    <ul class="nav flex-column px-2 py-2 gap-1 flex-grow-1">
+
+      {% with perfil=request.user.perfil|default_if_none:None %}
+
+      {# ── Cadastros ───────────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.acesso_cadastro %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_cad') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_cad', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-people nav-section-icon text-primary"></i>Cadastros
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'cadastros:cliente_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-person-lines-fill"></i> Clientes / Forn.
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:item_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-box-seam"></i> Itens
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:grupo_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-diagram-3"></i> Grupos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:condpag_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-calendar2-check"></i> Cond. Pagamento
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:portador_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-wallet2"></i> Portadores
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:metodo_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-lightning-charge"></i> Métodos Pgto.
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:tabela_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-tags"></i> Tabelas de Preço
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:vendedor_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-person-badge"></i> Vendedores
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'cadastros:tecnico_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-person-gear"></i> Técnicos
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# ── Financeiro ──────────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.acesso_financeiro %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_fin') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_fin', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-cash-stack nav-section-icon text-success"></i>Financeiro
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'financeiro:contarec_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-arrow-down-circle-fill" style="color:#20c997;"></i> Contas a Receber
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'financeiro:contapag_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-arrow-up-circle-fill" style="color:#fd7e64;"></i> Contas a Pagar
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'financeiro:boletos' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-upc-scan"></i> Geração de Boletos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'financeiro:caixa' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-safe2"></i> Caixa
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# ── Vendas ──────────────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.acesso_televendas %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_vnd') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_vnd', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-cart3 nav-section-icon text-warning"></i>Vendas
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'vendas:pedido_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-receipt"></i> Pedidos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'vendas:acerto_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-bar-chart-line"></i> Comissões
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# ── Serviços ────────────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.acesso_televendas %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_srv') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_srv', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-tools nav-section-icon text-info"></i>Serviços
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'servicos:crm_lookup' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-headset"></i> CRM / OS
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'servicos:agenda' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-calendar3"></i> Agenda
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'servicos:os_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-tools"></i> OS / TeleVendas
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'servicos:roteiro_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-map"></i> Roteiros
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# ── Estoque ─────────────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.acesso_estoque %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_est') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_est', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-boxes nav-section-icon text-warning"></i>Estoque
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'estoque:req_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-arrow-down-up"></i> Requisições
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'estoque:nf_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-receipt"></i> NF de Entrada
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'estoque:inv_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-clipboard2-check"></i> Inventário
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'estoque:saldo_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-bar-chart-steps"></i> Saldo por Item
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'estoque:ajuste_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-tools"></i> Ajustes
+            </a>
+          </li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# ── Configurações ───────────────────────────────────── #}
+      {% if request.user.is_superuser or perfil.nivel_adm >= 9 %}
+      <li x-data="{ open: JSON.parse(localStorage.getItem('nav_cfg') ?? 'false') }" class="nav-item mt-1">
+        <button class="nav-section-btn"
+                @click="open = !open; localStorage.setItem('nav_cfg', open)">
+          <span class="d-flex align-items-center">
+            <i class="bi bi-gear nav-section-icon text-secondary"></i>Configurações
+          </span>
+          <i class="bi bi-chevron-down nav-chevron" :class="{ 'rotated': !open }"></i>
+        </button>
+        <ul x-show="open" x-transition class="nav flex-column gap-1 ps-1 mt-1" style="display:none;">
+          <li>
+            <a href="{% url 'core:empresa_edit' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-building"></i> Empresa
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:usuario_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-person-gear"></i> Usuários
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:cfgcaixa_edit' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-safe2"></i> Config. Caixa
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:banco_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-bank"></i> Bancos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:cidade_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-geo-alt"></i> Cidades
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:cfop_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-file-earmark-text"></i> CFOP
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:projeto_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-folder2-open"></i> Projetos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:planoconta_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-list-columns"></i> Plano de Contas
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'core:subconta_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-diagram-2"></i> Sub-Contas
+            </a>
+          </li>
+          {% if request.user.is_superuser %}
+          <li>
+            <a href="{% url 'core:licenca_list' %}" class="nav-link text-white nav-item-link">
+              <i class="bi bi-shield-lock"></i> Licenças
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </li>
+      {% endif %}
+
+      {% endwith %}
+
+    </ul>
+
+    <!-- Rodapé do sidebar: usuário + logout -->
+    <div class="px-3 py-2 border-top border-secondary mt-auto">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <small class="text-secondary text-truncate">
+          <i class="bi bi-person-circle me-1"></i>{{ request.user.username }}
+        </small>
+        <div class="d-flex gap-1">
+          <a href="{% url 'core:trocar_senha' %}" class="btn btn-sm p-0 px-1 text-secondary" title="Trocar senha">
+            <i class="bi bi-key" style="font-size:.8rem;"></i>
+          </a>
+          <form method="post" action="{% url 'core:logout' %}" class="d-inline m-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm p-0 px-1 text-secondary" title="Sair">
+              <i class="bi bi-box-arrow-right" style="font-size:.8rem;"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Conteúdo Principal ──────────────────────────────── -->
+  <div class="flex-grow-1 d-flex flex-column">
+
+    <!-- Topbar -->
+    <header class="topbar bg-white border-bottom px-4 py-2 d-flex align-items-center gap-3">
+      <nav aria-label="breadcrumb" class="flex-grow-1">
+        <ol class="breadcrumb mb-0">
+          {% block breadcrumb %}
+          <li class="breadcrumb-item"><a href="/home/">Início</a></li>
+          {% endblock %}
+        </ol>
+      </nav>
+      {% if empresa_atual %}
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-flex align-items-center gap-1" style="font-size:.72rem; font-weight:500;">
+        <i class="bi bi-building"></i> {{ empresa_atual.razao }}
+      </span>
+      {% endif %}
+      <small class="text-muted">
+        <i class="bi bi-calendar3"></i>
+        <span id="data-atual"></span>
+      </small>
+    </header>
+
+    <!-- Aviso de expiração de licença (30 dias) -->
+    {% if request.licenca_aviso_dias %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 rounded-0 py-2 px-4"
+         style="font-size:.82rem;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>
+        A licença desta empresa expira em <strong>{{ request.licenca_aviso_dias }} dia{{ request.licenca_aviso_dias|pluralize }}</strong>.
+        Contate o administrador para renovação.
+      </span>
+    </div>
+    {% endif %}
+
+    <!-- Mensagens Django -->
+    {% if messages %}
+    <div class="px-4 pt-3">
+      {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Toast HTMX -->
+    <div id="toast-area" class="position-fixed top-0 end-0 p-3" style="z-index:1100"></div>
+
+    <main class="flex-grow-1 p-4">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+</div><!-- /d-flex -->
+
+<!-- ── Scripts ──────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+<script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+<script src="https://unpkg.com/imask@7.6.1/dist/imask.min.js"></script>
+<script src="/static/js/europa.js"></script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

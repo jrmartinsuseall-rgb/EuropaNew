@@ -1,0 +1,98 @@
+{% extends "relatorios/base_pdf.html" %}
+
+{% block title %}Orçamento — {{ projeto.codigo }}{% endblock %}
+{% block titulo %}Orçamento do Projeto{% endblock %}
+{% block subtitulo %}{{ projeto.codigo }} — {{ projeto.descricao }} &nbsp;|&nbsp; {{ mes_label }}/{{ ano }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  @page { size: A4 landscape; margin: 1.2cm 1.5cm 1.8cm 1.5cm; }
+  body  { font-size: 8pt; }
+  thead th  { font-size: 7pt; }
+  tbody td  { font-size: 7.5pt; padding: 2pt 4pt; }
+  tfoot td  { font-size: 7.5pt; padding: 3pt 4pt; font-weight: bold; }
+  .subgrupo-header td {
+    background: #e9ecef;
+    font-weight: bold;
+    font-size: 7pt;
+    padding: 3pt 4pt;
+    letter-spacing: .3pt;
+  }
+  .subgrupo-total td {
+    background: #f8f9fa;
+    font-style: italic;
+    font-size: 7pt;
+    border-top: 1px solid #dee2e6;
+  }
+  .diff-pos  { color: #198754; }
+  .diff-neg  { color: #dc3545; }
+  .diff-zero { color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% for grupo in grupos %}
+{% if grupo.linhas %}
+<div class="secao" {% if not forloop.first %}style="margin-top:14pt;"{% endif %}>
+  <div class="secao-titulo">{{ grupo.nome }}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Conta</th>
+        <th style="width:85pt" class="text-end">Estimado (R$)</th>
+        <th style="width:85pt" class="text-end">Realizado (R$)</th>
+        <th style="width:85pt" class="text-end">Diferença (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sg in grupo.subgrupos %}
+      {# ── Cabeçalho do subgrupo ── #}
+      <tr class="subgrupo-header">
+        <td colspan="4">{{ sg.nome }}</td>
+      </tr>
+      {# ── Linhas do subgrupo ── #}
+      {% for l in sg.linhas %}
+      <tr>
+        <td style="padding-left:12pt;">{{ l.conta.descricao }}</td>
+        <td class="text-end font-mono">{{ l.estimado|floatformat:2 }}</td>
+        <td class="text-end font-mono {% if l.realizado > 0 %}fw-bold{% endif %}">
+          {{ l.realizado|floatformat:2 }}
+        </td>
+        <td class="text-end font-mono
+            {% if l.diferenca < 0 %}diff-neg{% elif l.diferenca > 0 %}diff-pos{% else %}diff-zero{% endif %}">
+          {{ l.diferenca|floatformat:2 }}
+        </td>
+      </tr>
+      {% endfor %}
+      {# ── Subtotal do subgrupo (só se tiver mais de 1 linha) ── #}
+      {% if sg.linhas|length > 1 %}
+      <tr class="subgrupo-total">
+        <td class="text-end text-muted">Subtotal {{ sg.nome }}</td>
+        <td class="text-end font-mono">{{ sg.tot_estimado|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ sg.tot_realizado|floatformat:2 }}</td>
+        <td class="text-end font-mono
+            {% if sg.tot_diferenca < 0 %}diff-neg{% elif sg.tot_diferenca > 0 %}diff-pos{% else %}diff-zero{% endif %}">
+          {{ sg.tot_diferenca|floatformat:2 }}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="text-end text-muted">Total {{ grupo.nome }}</td>
+        <td class="text-end font-mono">{{ grupo.tot_estimado|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ grupo.tot_realizado|floatformat:2 }}</td>
+        <td class="text-end font-mono
+            {% if grupo.tot_diferenca < 0 %}diff-neg{% elif grupo.tot_diferenca > 0 %}diff-pos{% else %}diff-zero{% endif %}">
+          {{ grupo.tot_diferenca|floatformat:2 }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}

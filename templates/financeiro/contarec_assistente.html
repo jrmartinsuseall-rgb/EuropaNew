@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Assistente de Recebimento Recorrente{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0 fw-semibold">
+    <i class="bi bi-magic me-2 text-primary"></i>Assistente de Recebimento Recorrente
+  </h5>
+  <a href="{% url 'financeiro:contarec_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+{# ── Parâmetros globais ── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold">
+    <i class="bi bi-sliders me-1"></i>Parâmetros da Rodada
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Vencimento <span class="text-danger">*</span></label>
+        <input type="date" id="id_vencimento" name="vencimento"
+               class="form-control form-control-sm"
+               value="{{ hoje|date:'Y-m-d' }}"
+               hx-post="{% url 'financeiro:contarec_assistente_preview' %}"
+               hx-include="[name='vencimento']"
+               hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+               hx-target="#preview-wrapper"
+               hx-trigger="change"
+               hx-indicator="#spinner-preview">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Portador</label>
+        <select id="id_portador" name="portador" class="form-select form-select-sm">
+          <option value="">— Nenhum —</option>
+          {% for p in portadores %}
+          <option value="{{ p.pk }}">{{ p.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Banco</label>
+        <select id="id_banco" name="banco" class="form-select form-select-sm">
+          <option value="">— Nenhum —</option>
+          {% for b in bancos %}
+          <option value="{{ b.pk }}">{{ b.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <span id="spinner-preview" class="htmx-indicator spinner-border spinner-border-sm text-primary"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Área de preview (carregada via HTMX) ── #}
+<div id="preview-wrapper">
+  <div class="text-center text-muted py-4">
+    <i class="bi bi-arrow-up-circle fs-4 d-block mb-1"></i>
+    Selecione o vencimento para carregar a lista de clientes.
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Ao submeter o form de geração, inclui portador e banco dinamicamente
+  document.body.addEventListener('htmx:afterSettle', () => {
+    const form = document.getElementById('form-gerar');
+    if (!form) return;
+    form.querySelector('[name="portador"]')?.remove();
+    form.querySelector('[name="banco"]')?.remove();
+    const addHidden = (name, id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const h = document.createElement('input');
+      h.type = 'hidden'; h.name = name; h.value = el.value;
+      form.appendChild(h);
+    };
+    addHidden('portador', 'id_portador');
+    addHidden('banco',    'id_banco');
+    addHidden('vencimento', 'id_vencimento');
+  });
+</script>
+{% endblock %}

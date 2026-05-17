@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Trocar Senha{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Trocar Senha</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-md-5">
+
+    <div class="d-flex align-items-center mb-3">
+      <h5 class="mb-0"><i class="bi bi-key me-2 text-primary"></i>Trocar Senha</h5>
+    </div>
+
+    {% if senha_expirada %}
+    <div class="alert alert-warning d-flex gap-2 align-items-center mb-3 py-2">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>Sua senha expirou. Defina uma nova senha para continuar.</span>
+    </div>
+    {% endif %}
+
+    <div class="card form-card">
+      <div class="card-body">
+
+        <form method="post" autocomplete="off">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2 small">
+            {% for e in form.non_field_errors %}{{ e }}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label">Senha Atual</label>
+            {{ form.old_password }}
+            {% if form.old_password.errors %}
+            <div class="text-danger small mt-1">{{ form.old_password.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Nova Senha</label>
+            {{ form.new_password1 }}
+            {% if form.new_password1.errors %}
+            <div class="text-danger small mt-1">{{ form.new_password1.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Confirme a Nova Senha</label>
+            {{ form.new_password2 }}
+            {% if form.new_password2.errors %}
+            <div class="text-danger small mt-1">{{ form.new_password2.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg"></i> Confirmar
+            </button>
+            <a href="/home/" class="btn btn-secondary ms-auto">
+              <i class="bi bi-x-lg"></i> Cancelar
+            </a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

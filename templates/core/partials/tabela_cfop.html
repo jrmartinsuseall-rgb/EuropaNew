@@ -1,0 +1,31 @@
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Descrição</th>
+          <th style="width:80px">Tipo</th>
+          <th style="width:80px">Situação</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cfops %}
+          {% include "core/partials/linha_cfop.html" %}
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Nenhum CFOP encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if cfops %}
+  <div class="card-footer text-muted small py-1 px-3">
+    {{ cfops|length }} registro(s)
+  </div>
+  {% endif %}
+</div>

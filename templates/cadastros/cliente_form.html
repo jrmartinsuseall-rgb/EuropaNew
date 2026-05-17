@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'cadastros:cliente_list' %}">Clientes / Fornecedores</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+
+<div
+  x-data="{
+    aba: 'principal',
+    tipopessoa: '{{ form.tipopessoa.value|default:'F' }}',
+    cidadeTexto: '{% if objeto and objeto.cidade %}{{ objeto.cidade }}{% endif %}'
+  }"
+>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+      <i class="bi bi-person-lines-fill me-2 text-primary"></i>{{ titulo }}
+    </h5>
+    {% if objeto %}
+    <span class="text-muted small">Registro #{{ objeto.pk }}</span>
+    {% endif %}
+  </div>
+
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+
+    <div class="card form-card">
+
+      <!-- ── Cabeçalho rápido (sempre visível) ──── -->
+      <div class="card-header">
+        <div class="row g-2 align-items-end">
+
+          <div class="col-md-2">
+            <label class="form-label">Tipo</label>
+            {{ form.tipocliforemp }}
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Pessoa</label>
+            <select name="tipopessoa" class="form-select" x-model="tipopessoa">
+              <option value="F">Física</option>
+              <option value="J">Jurídica</option>
+            </select>
+          </div>
+
+          <div class="col-md-5" x-show="tipopessoa === 'J'" x-cloak>
+            <label class="form-label">Razão Social <span class="text-danger">*</span></label>
+            {{ form.razao }}
+          </div>
+          <div class="col-md-5" x-show="tipopessoa === 'F'" x-cloak>
+            <label class="form-label">Nome <span class="text-danger">*</span></label>
+            {{ form.nome }}
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label" x-text="tipopessoa === 'F' ? 'CPF' : 'CNPJ'">CPF</label>
+            {{ form.cnpjcpf }}
+          </div>
+
+        </div>
+      </div><!-- /card-header -->
+
+      <!-- ── Abas ──────────────────────────────── -->
+      <div class="card-body p-0">
+
+        <ul class="nav nav-tabs px-3 pt-2 border-bottom">
+          <li class="nav-item">
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'principal' }"
+              @click="aba = 'principal'">
+              <i class="bi bi-person me-1"></i>Dados Principais
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'contato' }"
+              @click="aba = 'contato'">
+              <i class="bi bi-telephone me-1"></i>Contato
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'endereco' }"
+              @click="aba = 'endereco'">
+              <i class="bi bi-geo-alt me-1"></i>Endereço
+            </button>
+          </li>
+          <li class="nav-item" x-show="tipopessoa === 'F'" x-cloak>
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'pessoal' }"
+              @click="aba = 'pessoal'">
+              <i class="bi bi-id-card me-1"></i>Dados Pessoais
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'comercial' }"
+              @click="aba = 'comercial'">
+              <i class="bi bi-graph-up me-1"></i>Comercial
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link"
+              :class="{ active: aba === 'obs' }"
+              @click="aba = 'obs'">
+              <i class="bi bi-chat-text me-1"></i>Observações
+            </button>
+          </li>
+        </ul>
+
+        <div class="p-3">
+
+          <!-- ── Aba: Dados Principais ─────────── -->
+          <div x-show="aba === 'principal'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-md-4" x-show="tipopessoa === 'J'" x-cloak>
+                <label class="form-label">Fantasia</label>
+                {{ form.fantasia }}
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label" x-text="tipopessoa === 'F' ? 'RG' : 'Insc. Estadual'">RG</label>
+                {{ form.identinscr }}
+              </div>
+
+              <div class="col-md-3" x-show="tipopessoa === 'F'" x-cloak>
+                <label class="form-label">Estado Civil</label>
+                {{ form.estadocivil }}
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Classificação</label>
+                {{ form.classificacao }}
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Data Cadastro</label>
+                {{ form.datacadastro }}
+              </div>
+
+              <div class="col-md-2">
+                <label class="form-label">Empresa</label>
+                {{ form.empresa }}
+              </div>
+
+              <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check mb-2">
+                  {{ form.inativo }}
+                  <label class="form-check-label" for="{{ form.inativo.id_for_label }}">Inativo</label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Aba: Contato ──────────────────── -->
+          <div x-show="aba === 'contato'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-md-3">
+                <label class="form-label">Telefone</label>
+                {{ form.fone }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Celular</label>
+                {{ form.celular }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">E-mail</label>
+                {{ form.email }}
+              </div>
+
+              <div class="col-12"><hr class="my-1"><small class="text-muted">Contatos Convênio</small></div>
+
+              <div class="col-md-3">
+                <label class="form-label">Fone Conv.</label>
+                {{ form.convfone }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Celular Conv.</label>
+                {{ form.convcelular }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Celular Conv. 1</label>
+                {{ form.convcelular1 }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Celular Conv. 2</label>
+                {{ form.convcelular2 }}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Aba: Endereço ─────────────────── -->
+          <div x-show="aba === 'endereco'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-md-2">
+                <label class="form-label">CEP</label>
+                {{ form.cep }}
+              </div>
+
+              <div class="col-md-5">
+                <label class="form-label">Endereço</label>
+                {{ form.endereco }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Nº</label>
+                {{ form.numero }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Bairro</label>
+                {{ form.bairro }}
+              </div>
+
+              <!-- Lookup de Cidade -->
+              <div class="col-md-4 position-relative">
+                <label class="form-label">Cidade</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Digite para buscar..."
+                  x-model="cidadeTexto"
+                  hx-get="{% url 'cadastros:cidade_lookup' %}"
+                  hx-trigger="keyup changed delay:300ms"
+                  hx-target="#cidade-dropdown"
+                  hx-vals="js:{q: document.querySelector('[x-model=cidadeTexto]').value}"
+                  autocomplete="nope"
+                >
+                <input type="hidden" name="cidade" value="{{ form.cidade.value|default:'' }}" id="cidade-id-input">
+                <div id="cidade-dropdown"></div>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Edifício</label>
+                {{ form.edificio }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Apto</label>
+                {{ form.apto }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Referência</label>
+                {{ form.referencia }}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Aba: Dados Pessoais (PF) ──────── -->
+          <div x-show="aba === 'pessoal'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-md-3">
+                <label class="form-label">Data Nascimento</label>
+                {{ form.fdatanasc }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Data Exp. RG</label>
+                {{ form.fdataexpid }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">UF Exp. RG</label>
+                {{ form.fufexpid }}
+              </div>
+
+              <div class="col-md-5">
+                <label class="form-label">Nome do Pai</label>
+                {{ form.fnomepai }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Nome da Mãe</label>
+                {{ form.fnomemae }}
+              </div>
+
+              <div class="col-12"><hr class="my-1"><small class="text-muted">Dados Profissionais</small></div>
+
+              <div class="col-md-4">
+                <label class="form-label">Empregador</label>
+                {{ form.fempregador }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Cargo</label>
+                {{ form.fcargo }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fone Empregador</label>
+                {{ form.ffoneempre }}
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Avalista</label>
+                {{ form.favalista }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Responsável</label>
+                {{ form.responsavel }}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Aba: Comercial ────────────────── -->
+          <div x-show="aba === 'comercial'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-md-2">
+                <label class="form-label">ID Vendedor</label>
+                {{ form.idvendrepre }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Nome Vendedor</label>
+                {{ form.nomevendedor }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Tipo Vendedor</label>
+                {{ form.tipovendedor }}
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Limite de Crédito (R$)</label>
+                {{ form.limitecredito }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">% Comissão</label>
+                {{ form.perccomiss }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">% Comissão Prom.</label>
+                {{ form.perccomissp }}
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Valor Referência (R$)</label>
+                {{ form.valorreferencia }}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Aba: Observações ──────────────── -->
+          <div x-show="aba === 'obs'" x-cloak>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Observação Geral</label>
+                {{ form.observacao }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Observação de Cobrança</label>
+                {{ form.obscobranca }}
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /p-3 -->
+      </div><!-- /card-body -->
+
+      <!-- ── Rodapé ─────────────────────────────── -->
+      <div class="card-footer d-flex gap-2">
+        <button type="submit" name="salvar" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Salvar
+        </button>
+        <button type="submit" name="salvar_novo" class="btn btn-outline-primary">
+          <i class="bi bi-plus-lg"></i> Salvar e Novo
+        </button>
+        <a href="{% url 'cadastros:cliente_list' %}" class="btn btn-secondary ms-auto">
+          <i class="bi bi-x-lg"></i> Cancelar
+        </a>
+      </div>
+
+    </div><!-- /card -->
+  </form>
+
+</div><!-- /x-data -->
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fecha dropdown de cidade ao clicar fora
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[x-model="cidadeTexto"]')) {
+    document.getElementById('cidade-dropdown').innerHTML = '';
+  }
+});
+
+// Chamada pelo partial lookup_cidade.html
+function selecionarCidade(id, texto) {
+  const comp = document.querySelector('[x-model="cidadeTexto"]');
+  if (comp) {
+    comp.value = texto;
+    comp.dispatchEvent(new Event('input'));  // actualiza x-model Alpine v3
+  }
+  document.getElementById('cidade-id-input').value = id;
+  document.getElementById('cidade-dropdown').innerHTML = '';
+}
+</script>
+{% endblock %}

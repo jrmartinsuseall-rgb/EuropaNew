@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Sub-Contas{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Sub-Contas</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-diagram-2 me-2 text-primary"></i>Sub-Contas</h5>
+  <a href="{% url 'core:subconta_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nova
+  </a>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="search" class="form-control" placeholder="Buscar por descrição..."
+            name="q" autocomplete="off"
+            hx-get="{% url 'core:subconta_buscar' %}"
+            hx-trigger="keyup changed delay:300ms, search"
+            hx-target="#tabela-wrapper"
+            hx-include="[name='conta']"
+            hx-indicator="#spinner">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select name="conta" class="form-select form-select-sm"
+          hx-get="{% url 'core:subconta_buscar' %}"
+          hx-trigger="change"
+          hx-target="#tabela-wrapper"
+          hx-include="[name='q']">
+          <option value="">Todas as contas</option>
+          {% for c in contas %}
+          <option value="{{ c.pk }}">{{ c.descricao }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <span id="spinner" class="htmx-indicator spinner-border spinner-border-sm text-primary"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tabela-wrapper">
+  {% include "core/partials/tabela_subcontas.html" %}
+</div>
+{% endblock %}

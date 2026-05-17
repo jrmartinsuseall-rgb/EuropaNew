@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Requisições de Estoque{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Requisições</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-arrow-down-up me-2 text-warning"></i>Requisições de Estoque</h5>
+  <a href="{% url 'estoque:req_create' %}" class="btn btn-sm btn-primary">
+    <i class="bi bi-plus-lg"></i> Nova Requisição
+  </a>
+</div>
+
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <select name="status" class="form-select form-select-sm" style="width:150px;" onchange="this.form.submit()">
+          <option value="">Todos os status</option>
+          {% for val, lbl in status_choices %}
+          <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" value="{{ q }}" class="form-control"
+                 placeholder="Nº, origem ou solicitante...">
+        </div>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+        {% if q or status %}
+        <a href="{% url 'estoque:req_list' %}" class="btn btn-sm btn-outline-secondary ms-1">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card form-card">
+  {% if lista %}
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px">#</th>
+          <th style="width:100px">Data</th>
+          <th style="width:130px">Origem</th>
+          <th>Solicitante</th>
+          <th style="width:100px">Atendimento</th>
+          <th style="width:80px" class="text-center">Status</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in lista %}
+        <tr>
+          <td class="small font-monospace fw-semibold">{{ r.idrequisicao }}</td>
+          <td class="small">{{ r.data|date:"d/m/Y" }}</td>
+          <td class="small">{{ r.origem|default:"—" }}</td>
+          <td class="small">{% if r.cliforemp %}{{ r.cliforemp.razao|default:r.cliforemp.nome|default:"—" }}{% else %}—{% endif %}</td>
+          <td class="small">{% if r.dataatendi %}{{ r.dataatendi|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td class="text-center">
+            <span class="badge
+              {% if r.status == 'A' %}bg-primary-subtle text-primary-emphasis
+              {% elif r.status == 'P' %}bg-warning-subtle text-warning-emphasis
+              {% elif r.status == 'F' %}bg-success-subtle text-success-emphasis
+              {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+              {{ r.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <a href="{% url 'estoque:req_detalhe' r.pk %}" class="btn btn-xs btn-outline-secondary p-0 px-1">
+              <i class="bi bi-eye" style="font-size:.75rem;"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'partials/paginacao.html' %}
+  {% else %}
+  <div class="text-center text-muted py-4">
+    <i class="bi bi-arrow-down-up d-block fs-3 mb-2"></i>Nenhuma requisição encontrada.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

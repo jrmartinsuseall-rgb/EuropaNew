@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Inventário #{{ inv.idinventario }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:inv_list' %}">Inventários</a></li>
+<li class="breadcrumb-item active">#{{ inv.idinventario }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .inv-row-ok       { background: rgba( 25,135, 84,.06); }
+  .inv-row-entrada  { background: rgba( 13,110,253,.07); }
+  .inv-row-saida    { background: rgba(220, 53, 69,.07); }
+  .inv-row-pendente { background: transparent; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ──────────────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h5 class="mb-0">
+      <i class="bi bi-clipboard2-check me-2 text-info"></i>
+      Inventário <span class="font-monospace">#{{ inv.idinventario }}</span>
+      <span class="badge ms-2
+        {% if inv.status == 'A' %}bg-warning-subtle text-warning-emphasis
+        {% elif inv.status == 'F' %}bg-success-subtle text-success-emphasis
+        {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+        {{ inv.get_status_display }}
+      </span>
+    </h5>
+    <small class="text-muted">
+      {{ inv.data|date:"d/m/Y" }}
+      {% if inv.descricao %}&bull; {{ inv.descricao }}{% endif %}
+      &bull; Criado por {{ inv.usuario }}
+      {% if inv.datafinalizacao %}&bull; Finalizado em {{ inv.datafinalizacao|date:"d/m/Y" }}{% endif %}
+    </small>
+  </div>
+
+  {% if not bloqueado %}
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'estoque:inv_cancelar' inv.pk %}"
+          onsubmit="return confirm('Cancelar este inventário? A operação não pode ser desfeita.')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-x-circle me-1"></i>Cancelar
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+{% if inv.observacao %}
+<div class="alert alert-secondary py-2 small mb-3">
+  <i class="bi bi-chat-left-text me-1"></i> {{ inv.observacao }}
+</div>
+{% endif %}
+
+{# ── Painel de resumo ────────────────────────────────────────────────────────── #}
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5">{{ total }}</div>
+      <div class="small text-muted">Total Itens</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5 text-success">{{ contados }}</div>
+      <div class="small text-muted">Contados</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5 {% if pendentes > 0 %}text-warning{% else %}text-muted{% endif %}">{{ pendentes }}</div>
+      <div class="small text-muted">Pendentes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5 {% if com_dif > 0 %}text-danger{% else %}text-muted{% endif %}">{{ com_dif }}</div>
+      <div class="small text-muted">Com Diferença</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5 text-primary">+{{ entradas|floatformat:3 }}</div>
+      <div class="small text-muted">Entradas (Aj.)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card form-card text-center py-2">
+      <div class="fw-bold fs-5 text-danger">-{{ saidas|floatformat:3 }}</div>
+      <div class="small text-muted">Saídas (Aj.)</div>
+    </div>
+  </div>
+</div>
+
+{# ── Legenda ──────────────────────────────────────────────────────────────────── #}
+{% if not bloqueado %}
+<div class="d-flex flex-wrap gap-3 mb-2" style="font-size:.76rem;">
+  <span class="px-2 py-1 rounded" style="background:rgba(25,135,84,.1)"><i class="bi bi-check-circle text-success me-1"></i>Sem diferença</span>
+  <span class="px-2 py-1 rounded" style="background:rgba(13,110,253,.1)"><i class="bi bi-arrow-up-circle text-primary me-1"></i>Entrada de ajuste (estoque físico maior)</span>
+  <span class="px-2 py-1 rounded" style="background:rgba(220,53,69,.1)"><i class="bi bi-arrow-down-circle text-danger me-1"></i>Saída de ajuste (estoque físico menor)</span>
+  <span><i class="bi bi-dash-circle text-muted me-1"></i>Aguardando contagem</span>
+</div>
+{% endif %}
+
+{# ── Tabela de itens ─────────────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small">
+      <i class="bi bi-list-ul me-1 text-success"></i>Itens do Inventário
+    </span>
+    {% if not bloqueado %}
+    <span class="small text-muted">Digite o saldo físico contado e clique em <strong>Salvar Contagem</strong></span>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <form method="post" action="{% url 'estoque:inv_contagem' inv.pk %}" id="form-contagem">
+      {% csrf_token %}
+      <table class="table table-sm mb-0" style="font-size:.82rem;">
+        <thead class="table-light">
+          <tr>
+            <th style="width:30px"></th>
+            <th>Identificação</th>
+            <th>Descrição</th>
+            <th style="width:110px" class="text-end">Saldo Sistema</th>
+            <th style="width:115px" class="text-end">Saldo Físico</th>
+            <th style="width:110px" class="text-end">Diferença</th>
+            <th style="width:70px" class="text-center">Ajustado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in itens %}
+          <tr class="{% if item.saldo_fisico is not None and item.diferenca == 0 %}inv-row-ok{% elif item.saldo_fisico is not None and item.diferenca > 0 %}inv-row-entrada{% elif item.saldo_fisico is not None and item.diferenca < 0 %}inv-row-saida{% else %}inv-row-pendente{% endif %}">
+            <td class="text-center">
+              {% if item.saldo_fisico is None %}
+                <i class="bi bi-dash-circle text-muted" title="Aguardando contagem"></i>
+              {% elif item.diferenca == 0 %}
+                <i class="bi bi-check-circle-fill text-success" title="Sem diferença"></i>
+              {% elif item.diferenca > 0 %}
+                <i class="bi bi-arrow-up-circle-fill text-primary" title="Entrada de ajuste"></i>
+              {% else %}
+                <i class="bi bi-arrow-down-circle-fill text-danger" title="Saída de ajuste"></i>
+              {% endif %}
+            </td>
+            <td class="font-monospace small">{{ item.identificacao|default:"—" }}</td>
+            <td class="small">{{ item.descricao_item|truncatechars:55 }}</td>
+            <td class="text-end font-monospace">{{ item.saldo_sistema|floatformat:3 }}</td>
+            <td class="text-end">
+              {% if bloqueado %}
+                <span class="font-monospace">
+                  {% if item.saldo_fisico is not None %}{{ item.saldo_fisico|floatformat:3 }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </span>
+              {% else %}
+                <input type="number" name="fisico_{{ item.pk }}"
+                       class="form-control form-control-sm text-end font-monospace"
+                       style="width:108px;"
+                       step="0.001" min="0"
+                       {% if item.saldo_fisico is not None %}value="{{ item.saldo_fisico|floatformat:3 }}"{% endif %}
+                       placeholder="0,000">
+              {% endif %}
+            </td>
+            <td class="text-end font-monospace fw-semibold
+              {% if item.saldo_fisico is None %}text-muted
+              {% elif item.diferenca > 0 %}text-primary
+              {% elif item.diferenca < 0 %}text-danger
+              {% else %}text-success{% endif %}">
+              {% if item.saldo_fisico is not None %}
+                {% if item.diferenca > 0 %}+{% endif %}{{ item.diferenca|floatformat:3 }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-center">
+              {% if item.ajustado %}
+                <i class="bi bi-check-lg text-success" title="Ajuste registrado"></i>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if not bloqueado %}
+      <div class="card-body pt-2 pb-3 d-flex align-items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-floppy me-1"></i>Salvar Contagem
+        </button>
+        <small class="text-muted">Salva os saldos físicos sem finalizar — pode ser feito em etapas.</small>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{# ── Finalização ─────────────────────────────────────────────────────────────── #}
+{% if not bloqueado %}
+<div class="card form-card border-{% if pendentes > 0 %}warning{% else %}success{% endif %}">
+  <div class="card-body py-3">
+    <div class="d-flex align-items-start gap-3">
+      {% if pendentes > 0 %}
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 mt-1"></i>
+        <div>
+          <strong>Contagem incompleta</strong>
+          <p class="small text-muted mb-0">
+            Ainda há <strong>{{ pendentes }} item(ns)</strong> sem saldo físico registrado.
+            Salve a contagem de todos os itens antes de finalizar.
+          </p>
+        </div>
+      {% else %}
+        <i class="bi bi-check-circle-fill text-success fs-5 mt-1"></i>
+        <div class="flex-grow-1">
+          <strong>Contagem completa</strong>
+          <p class="small text-muted mb-2">
+            Todos os itens foram contados.
+            {% if com_dif > 0 %}
+              <strong>{{ com_dif }} item(ns)</strong> com diferença — serão gerados ajustes de estoque:
+              <strong class="text-primary">+{{ entradas|floatformat:3 }}</strong> entrada(s) e
+              <strong class="text-danger">-{{ saidas|floatformat:3 }}</strong> saída(s).
+            {% else %}
+              Nenhuma diferença encontrada — nenhum ajuste será gerado.
+            {% endif %}
+          </p>
+          <form method="post" action="{% url 'estoque:inv_finalizar' inv.pk %}"
+                onsubmit="return confirm('Finalizar o inventário? Os ajustes de estoque serão gerados e a operação não poderá ser desfeita.')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-success">
+              <i class="bi bi-check2-all me-1"></i>Finalizar Inventário
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

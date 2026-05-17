@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.pk }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'vendas:pedido_list' %}">Pedidos</a></li>
+<li class="breadcrumb-item active">Pedido #{{ pedido.pk }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-cart3 me-2 text-primary"></i>
+    Pedido #{{ pedido.pk }}
+    {% if pedido.numgrafico %}
+      <span class="text-muted fw-normal fs-6">| Gráfico: {{ pedido.numgrafico }}</span>
+    {% endif %}
+    <span class="ms-2">
+      {% if pedido.status == 'A' %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">Aberto</span>
+      {% elif pedido.status == 'F' %}
+        <span class="badge bg-primary-subtle text-primary-emphasis">Faturado</span>
+      {% elif pedido.status == 'I' %}
+        <span class="badge bg-success-subtle text-success-emphasis">Instalado</span>
+      {% else %}
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">Cancelado</span>
+      {% endif %}
+    </span>
+  </h5>
+  <div class="d-flex gap-2">
+    {% if pedido.status == 'A' %}
+    <button type="button" class="btn btn-success btn-sm"
+            data-bs-toggle="modal" data-bs-target="#modalInstalar">
+      <i class="bi bi-check2-circle me-1"></i>Instalar
+    </button>
+    <button type="button" class="btn btn-outline-danger btn-sm"
+            data-bs-toggle="modal" data-bs-target="#modalCancelar">
+      <i class="bi bi-x-circle me-1"></i>Cancelar
+    </button>
+    {% elif pedido.status == 'I' %}
+    <form method="post" action="{% url 'vendas:pedido_faturar' pedido.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm"
+              onclick="return confirm('Faturar este pedido e gerar contas a receber?')">
+        <i class="bi bi-receipt me-1"></i>Faturar
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'vendas:pedido_espelho' pedido.pk %}" target="_blank"
+       class="btn btn-outline-dark btn-sm" title="Espelho PDF">
+      <i class="bi bi-printer me-1"></i>Espelho
+    </a>
+    <a href="{% url 'vendas:pedido_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Voltar
+    </a>
+  </div>
+</div>
+
+{% if pedido.status == 'C' and pedido.motivocancela %}
+<div class="alert alert-secondary py-2 small mb-3">
+  <i class="bi bi-info-circle me-1"></i>
+  <strong>Cancelado em {{ pedido.datacancela|date:"d/m/Y" }}:</strong> {{ pedido.motivocancela }}
+</div>
+{% endif %}
+
+{# ── Cabeçalho ──────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">Dados do Pedido</div>
+  <div class="card-body py-2">
+    <div class="row g-2" style="font-size:.85rem;">
+      <div class="col-md-4">
+        <span class="text-muted">Cliente:</span>
+        <strong class="ms-1">{{ pedido.cliente.razao|default:pedido.cliente.nome }}</strong>
+      </div>
+      <div class="col-md-2">
+        <span class="text-muted">Data Venda:</span>
+        <span class="ms-1 font-monospace">{{ pedido.datavenda|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      <div class="col-md-2">
+        <span class="text-muted">Prev. Instal.:</span>
+        <span class="ms-1 font-monospace">{{ pedido.previnstal|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      <div class="col-md-2">
+        <span class="text-muted">Faturamento:</span>
+        <span class="ms-1 font-monospace">{{ pedido.datafat|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      <div class="col-md-2">
+        <span class="text-muted">Instalação:</span>
+        <span class="ms-1 font-monospace">{{ pedido.datainstal|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      {% if pedido.condicao %}
+      <div class="col-md-3">
+        <span class="text-muted">Condição:</span>
+        <span class="ms-1">{{ pedido.condicao.descricao }}</span>
+      </div>
+      {% endif %}
+      {% if pedido.tabela %}
+      <div class="col-md-3">
+        <span class="text-muted">Tabela:</span>
+        <span class="ms-1">{{ pedido.tabela.descricao }}</span>
+      </div>
+      {% endif %}
+      {% if pedido.metodo %}
+      <div class="col-md-3">
+        <span class="text-muted">Método:</span>
+        <span class="ms-1">{{ pedido.metodo.descricao }}</span>
+      </div>
+      {% endif %}
+      <div class="col-md-2">
+        <span class="text-muted">Total:</span>
+        <strong class="ms-1 font-monospace text-primary">R$ {{ pedido.valortotal|floatformat:2 }}</strong>
+      </div>
+      <div class="col-md-3">
+        <span class="text-muted">Vendedor:</span>
+        {% if vendedor %}
+          <strong class="ms-1">{{ vendedor.razao|default:vendedor.nome }}</strong>
+        {% else %}
+          <span class="ms-1 text-muted fst-italic">Não definido</span>
+        {% endif %}
+      </div>
+      {% if pedido.observacao %}
+      <div class="col-12">
+        <span class="text-muted">Observação:</span>
+        <span class="ms-1">{{ pedido.observacao }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Itens ──────────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-list-ul me-1"></i>Itens
+    <span class="badge bg-secondary ms-1">{{ itens|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th>Descrição</th>
+          <th style="width:120px">Identificação</th>
+          <th style="width:90px" class="text-end">Qtd</th>
+          <th style="width:120px" class="text-end">Valor Unit.</th>
+          <th style="width:110px" class="text-end">Instalação</th>
+          <th style="width:120px" class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in itens %}
+        <tr>
+          <td class="small">{{ it.item.descricao|default:it.identificacao|truncatechars:60 }}</td>
+          <td class="font-monospace small text-muted">{{ it.identificacao|default:"—" }}</td>
+          <td class="text-end font-monospace">{{ it.quantidade|floatformat:3 }}</td>
+          <td class="text-end font-monospace">R$ {{ it.valorunitario|floatformat:2 }}</td>
+          <td class="text-end font-monospace">R$ {{ it.instalacao|floatformat:2 }}</td>
+          <td class="text-end font-monospace fw-semibold">R$ {{ it.valortotal|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3 small">Nenhum item.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if itens %}
+      <tfoot class="table-light">
+        <tr>
+          <td colspan="5" class="text-end fw-semibold small">Total:</td>
+          <td class="text-end font-monospace fw-bold text-primary">R$ {{ pedido.valortotal|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{# ── Parcelas ───────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-calendar3 me-1"></i>Parcelas
+    <span class="badge bg-secondary ms-1">{{ parcelas|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:80px" class="text-center">Parcela</th>
+          <th style="width:130px">Vencimento</th>
+          <th style="width:150px" class="text-end">Valor (R$)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in parcelas %}
+        <tr>
+          <td class="text-center font-monospace">{{ p.parcela }}</td>
+          <td class="font-monospace small">{{ p.vencimento|date:"d/m/Y" }}</td>
+          <td class="text-end font-monospace">R$ {{ p.valor|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="text-center text-muted py-3 small">Nenhuma parcela.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── Modal Instalar ────────────────────────────────────────────── #}
+{% if pedido.status == 'A' %}
+<div class="modal fade" id="modalInstalar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title text-success">
+          <i class="bi bi-check2-circle me-1"></i>Registrar Instalação — Pedido #{{ pedido.pk }}
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'vendas:pedido_instalar' pedido.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label form-label-sm fw-semibold">
+                Data de Instalação <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="datainstal" class="form-control form-control-sm"
+                     value="{{ today|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm fw-semibold">Técnico Responsável</label>
+              <select name="idtecnico" class="form-select form-select-sm">
+                <option value="">— Não informado —</option>
+                {% for t in tecnicos %}
+                <option value="{{ t.pk }}"
+                  {% if tecnico_atual and tecnico_atual.pk == t.pk %}selected{% endif %}>
+                  {{ t.razao|default:t.nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label form-label-sm fw-semibold">Observação</label>
+              <textarea name="observacao" class="form-control form-control-sm" rows="2"
+                        placeholder="Observações sobre a instalação...">{{ pedido.observacao }}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-check2-circle me-1"></i>Confirmar Instalação
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Modal Cancelar ────────────────────────────────────────────── #}
+{% if pedido.status == 'A' %}
+<div class="modal fade" id="modalCancelar" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Cancelar Pedido #{{ pedido.pk }}</h6>
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'vendas:pedido_cancelar' pedido.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label small fw-semibold">Motivo <span class="text-danger">*</span></label>
+          <input type="text" name="motivo" class="form-control form-control-sm"
+                 placeholder="Informe o motivo..." required maxlength="200">
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Voltar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Cancelar Pedido</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

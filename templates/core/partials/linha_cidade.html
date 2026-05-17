@@ -1,0 +1,35 @@
+<tr id="cidade-{{ c.pk }}" class="{% if c.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ c.pk }}</td>
+  <td>
+    <a href="{% url 'core:cidade_edit' c.pk %}" class="text-decoration-none fw-semibold">
+      {{ c.descricao }}
+    </a>
+  </td>
+  <td class="fw-semibold">{{ c.uf }}</td>
+  <td class="small text-muted font-monospace">{{ c.codibge|default:"—" }}</td>
+  <td>
+    {% if c.inativo %}
+      <span class="badge bg-danger">Inativa</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativa</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'core:cidade_edit' c.pk %}"
+         class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button
+        class="btn btn-sm {% if c.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        title="{% if c.inativo %}Reativar{% else %}Inativar{% endif %}"
+        hx-post="{% url 'core:cidade_inativar' c.pk %}"
+        hx-target="#cidade-{{ c.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="{% if c.inativo %}Reativar {{ c.descricao }}?{% else %}Inativar {{ c.descricao }}?{% endif %}"
+      >
+        <i class="bi {% if c.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

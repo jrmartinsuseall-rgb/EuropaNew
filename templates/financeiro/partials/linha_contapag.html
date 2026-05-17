@@ -1,0 +1,90 @@
+<tr id="cp-{{ t.pk }}"
+  class="{% if t.vencido %}table-danger{% elif t.status == 'B' %}text-muted{% elif t.status == 'C' %}text-muted text-decoration-line-through{% endif %}">
+
+  <td class="text-muted small">{{ t.pk }}</td>
+
+  <td class="small font-monospace">{{ t.numerodoc|default:"—" }}</td>
+
+  <td>
+    <a href="{% url 'financeiro:contapag_edit' t.pk %}" class="text-decoration-none fw-semibold">
+      {{ t.fornecedor.razao|default:t.fornecedor.nome }}
+    </a>
+  </td>
+
+  <td class="small">{{ t.data|date:"d/m/Y" }}</td>
+
+  <td class="small {% if t.vencido %}text-danger fw-semibold{% endif %}">
+    {{ t.vencimento|date:"d/m/Y" }}
+    {% if t.vencido %}<i class="bi bi-exclamation-triangle-fill ms-1" title="Vencido"></i>{% endif %}
+  </td>
+
+  <td class="small">
+    {% if t.pagamento %}{{ t.pagamento|date:"d/m/Y" }}{% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+
+  <td class="text-center small">{{ t.parcela }}</td>
+
+  <td class="text-end fw-semibold">R$ {{ t.valor|floatformat:2 }}</td>
+
+  <td class="text-end small {% if t.juros > 0 %}text-danger{% endif %}">
+    {% if t.juros %}R$ {{ t.juros|floatformat:2 }}{% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+
+  <td class="text-end small {% if t.descontos > 0 %}text-success{% endif %}">
+    {% if t.descontos %}R$ {{ t.descontos|floatformat:2 }}{% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+
+  <td class="text-end small fw-semibold">
+    {% if t.valorpago %}R$ {{ t.valorpago|floatformat:2 }}{% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+
+  <td class="text-end small {% if t.status == 'A' and t.saldo > 0 %}text-danger{% endif %}">
+    {% if t.status == 'B' %}
+      <span class="text-muted">—</span>
+    {% else %}
+      R$ {{ t.saldo|floatformat:2 }}
+    {% endif %}
+  </td>
+
+  <td>
+    {% if t.status == 'A' %}
+      <span class="badge bg-primary">Aberto</span>
+    {% elif t.status == 'B' %}
+      <span class="badge bg-success">Baixado</span>
+    {% elif t.status == 'P' %}
+      <span class="badge bg-warning text-dark">Parcial</span>
+    {% elif t.status == 'C' %}
+      <span class="badge bg-secondary">Cancelado</span>
+    {% endif %}
+  </td>
+
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'financeiro:contapag_edit' t.pk %}"
+         class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      {% if t.status == 'A' %}
+      <button
+        class="btn btn-sm btn-outline-danger"
+        title="Cancelar título"
+        hx-post="{% url 'financeiro:contapag_cancelar' t.pk %}"
+        hx-target="#cp-{{ t.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="Cancelar o título CP-{{ t.pk }}?">
+        <i class="bi bi-x-circle"></i>
+      </button>
+      {% elif t.status == 'C' %}
+      <button
+        class="btn btn-sm btn-outline-success"
+        title="Reabrir título"
+        hx-post="{% url 'financeiro:contapag_cancelar' t.pk %}"
+        hx-target="#cp-{{ t.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="Reabrir o título CP-{{ t.pk }}?">
+        <i class="bi bi-arrow-counterclockwise"></i>
+      </button>
+      {% endif %}
+    </div>
+  </td>
+</tr>

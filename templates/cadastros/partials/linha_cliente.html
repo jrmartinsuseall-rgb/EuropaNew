@@ -1,0 +1,48 @@
+<tr id="cliente-{{ c.pk }}" class="{% if c.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ c.pk }}</td>
+  <td>
+    <a href="{% url 'cadastros:cliente_edit' c.pk %}" class="text-decoration-none fw-semibold">
+      {{ c.nome_exibicao }}
+    </a>
+    {% if c.fantasia and c.fantasia != c.razao %}
+      <br><small class="text-muted">{{ c.fantasia }}</small>
+    {% endif %}
+  </td>
+  <td class="font-monospace small">{{ c.cnpjcpf|default:"—" }}</td>
+  <td class="small">{{ c.fone|default:c.celular|default:"—" }}</td>
+  <td class="small">{{ c.cidade|default:"—" }}</td>
+  <td>
+    {% if c.tipocliforemp == 'C' %}
+      <span class="badge bg-success">Cliente</span>
+    {% elif c.tipocliforemp == 'F' %}
+      <span class="badge bg-warning text-dark">Fornecedor</span>
+    {% else %}
+      <span class="badge bg-secondary">Empresa</span>
+    {% endif %}
+  </td>
+  <td>
+    {% if c.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'cadastros:cliente_edit' c.pk %}"
+         class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button
+        class="btn btn-sm {% if c.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        title="{% if c.inativo %}Reativar{% else %}Inativar{% endif %}"
+        hx-post="{% url 'cadastros:cliente_inativar' c.pk %}"
+        hx-target="#cliente-{{ c.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="{% if c.inativo %}Reativar {{ c.nome_exibicao }}?{% else %}Inativar {{ c.nome_exibicao }}?{% endif %}"
+      >
+        <i class="bi {% if c.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

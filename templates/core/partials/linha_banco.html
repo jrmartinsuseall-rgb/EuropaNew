@@ -1,0 +1,36 @@
+<tr id="banco-{{ b.pk }}" class="{% if b.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ b.pk }}</td>
+  <td class="fw-semibold font-monospace">{{ b.numero }}</td>
+  <td>
+    <a href="{% url 'core:banco_edit' b.pk %}" class="text-decoration-none fw-semibold">
+      {{ b.descricao }}
+    </a>
+  </td>
+  <td class="small">{{ b.agencia|default:"—" }}</td>
+  <td class="small font-monospace">{{ b.conta|default:"—" }}</td>
+  <td>
+    {% if b.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'core:banco_edit' b.pk %}"
+         class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button
+        class="btn btn-sm {% if b.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        title="{% if b.inativo %}Reativar{% else %}Inativar{% endif %}"
+        hx-post="{% url 'core:banco_inativar' b.pk %}"
+        hx-target="#banco-{{ b.pk }}"
+        hx-swap="outerHTML"
+        hx-confirm="{% if b.inativo %}Reativar {{ b.descricao }}?{% else %}Inativar {{ b.descricao }}?{% endif %}"
+      >
+        <i class="bi {% if b.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}NFs de Entrada{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">NFs de Entrada</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-receipt me-2 text-success"></i>Notas Fiscais de Entrada</h5>
+  <a href="{% url 'estoque:nf_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nova NF
+  </a>
+</div>
+
+{# ── Filtros ── #}
+<form method="get" class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input type="search" name="q" value="{{ q }}" class="form-control"
+                 placeholder="Nº NF ou razão do fornecedor...">
+        </div>
+      </div>
+      <div class="col-md-2">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Todos os status</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-funnel"></i> Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{# ── Tabela ── #}
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:60px">#</th>
+          <th style="width:80px">Nº NF</th>
+          <th>Fornecedor</th>
+          <th style="width:100px">Emissão</th>
+          <th style="width:100px">Entrada</th>
+          <th style="width:100px" class="text-end">Total NF</th>
+          <th style="width:90px" class="text-center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for nf in lista %}
+        <tr style="cursor:pointer;" onclick="location.href='{% url 'estoque:nf_detalhe' nf.pk %}'">
+          <td class="text-muted small font-monospace">{{ nf.idnfentrada }}</td>
+          <td class="font-monospace fw-semibold">{{ nf.numeronf }}</td>
+          <td>{{ nf.fornecedor.razao|default:nf.fornecedor.nome }}</td>
+          <td class="text-muted small">{{ nf.dataemissao|date:"d/m/Y"|default:"—" }}</td>
+          <td class="text-muted small">{{ nf.dataentrada|date:"d/m/Y"|default:"—" }}</td>
+          <td class="text-end font-monospace">R$ {{ nf.valortotalnf|floatformat:2 }}</td>
+          <td class="text-center">
+            <span class="badge
+              {% if nf.status == 'A' %}bg-warning-subtle text-warning-emphasis
+              {% elif nf.status == 'L' %}bg-success-subtle text-success-emphasis
+              {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+              {{ nf.get_status_display }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4 small">Nenhuma NF encontrada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'partials/paginacao.html' %}
+</div>
+{% endblock %}

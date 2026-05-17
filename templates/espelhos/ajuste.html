@@ -1,0 +1,77 @@
+{% extends "relatorios/base_pdf.html" %}
+{% block title %}Ajuste #{{ mov.idmovimento }}{% endblock %}
+{% block titulo %}AJUSTE DE ESTOQUE{% endblock %}
+{% block subtitulo %}Nº {{ mov.idmovimento }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-item label {
+    display: block;
+    font-size: 7pt;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .3pt;
+  }
+  .info-item span { font-size: 8.5pt; font-weight: bold; }
+  .tipo-entrada { color: #198754; font-size: 10pt; }
+  .tipo-saida   { color: #dc3545; font-size: 10pt; }
+  .motivo-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 5pt 7pt;
+    font-size: 8pt;
+    margin-top: 8pt;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Dados do Ajuste ─────────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Dados do Ajuste</div>
+  <div style="border:1px solid #dee2e6; border-top:none; padding:8pt;">
+    <div class="info-grid-4">
+      <div class="info-item">
+        <label>Data</label>
+        <span>{{ mov.data|date:"d/m/Y" }}</span>
+      </div>
+      <div class="info-item">
+        <label>Tipo</label>
+        <span class="{% if mov.ent_sai == 'E' %}tipo-entrada{% else %}tipo-saida{% endif %}">
+          {% if mov.ent_sai == 'E' %}▲ Entrada{% else %}▼ Saída{% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <label>Quantidade</label>
+        <span>{{ mov.quantidade|floatformat:3 }}</span>
+      </div>
+      <div class="info-item">
+        <label>Usuário</label>
+        <span>{{ mov.usuariologado|default:"—" }}</span>
+      </div>
+    </div>
+    <div class="info-grid-4">
+      <div class="info-item wide" style="grid-column: span 2;">
+        <label>Item</label>
+        <span>{{ mov.item.descricao }}</span>
+      </div>
+      <div class="info-item">
+        <label>Identificação</label>
+        <span class="font-mono" style="font-family:'Courier New',monospace;">{{ mov.identificacao }}</span>
+      </div>
+    </div>
+    {% if mov.observacao %}
+    <div class="motivo-box"><strong>Motivo:</strong> {{ mov.observacao }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th style="width:80px">Nº</th>
+          <th>Descrição</th>
+          <th style="width:120px">Agência</th>
+          <th style="width:150px">Conta</th>
+          <th style="width:80px">Situação</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bancos %}
+          {% include "core/partials/linha_banco.html" %}
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Nenhum banco encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if bancos %}
+  <div class="card-footer text-muted small py-1 px-3">
+    {{ bancos|length }} registro(s)
+  </div>
+  {% endif %}
+</div>

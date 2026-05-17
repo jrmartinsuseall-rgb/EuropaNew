@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Contas a Receber{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0 fw-semibold"><i class="bi bi-arrow-down-circle me-2"></i>Contas a Receber</h5>
+  <div class="d-flex gap-2">
+    <a href="{% url 'financeiro:contarec_imprimir' %}?status={{ status_filtro }}"
+       target="_blank" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </a>
+    <a href="{% url 'financeiro:contarec_assistente' %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-magic me-1"></i>Assistente
+    </a>
+    <a href="{% url 'financeiro:contarec_create' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Novo Lançamento
+    </a>
+  </div>
+</div>
+
+{# ── Tabs de situação ────────────────────────────────────────── #}
+<ul class="nav nav-tabs mb-3" id="statusTabs">
+  <li class="nav-item">
+    <a class="nav-link {% if status_filtro == 'A' %}active{% endif %}"
+       href="?status=A">
+      Abertos
+      <span class="badge bg-primary ms-1">{{ counts.aberto }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status_filtro == 'VENCIDO' %}active{% endif %}"
+       href="?status=A&vencido=1"
+       hx-get="{% url 'financeiro:contarec_buscar' %}?status=A&vencido=1"
+       hx-target="#tabela-wrapper"
+       hx-push-url="false">
+      Vencidos
+      <span class="badge bg-danger ms-1">{{ counts.vencido }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status_filtro == 'B' %}active{% endif %}"
+       href="?status=B">
+      Baixados / Parciais
+      <span class="badge bg-success ms-1">{{ counts.baixado }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status_filtro == 'C' %}active{% endif %}"
+       href="?status=C">
+      Cancelados / Reneg.
+      <span class="badge bg-secondary ms-1">{{ counts.cancelado }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status_filtro == 'TODOS' %}active{% endif %}"
+       href="?status=TODOS">
+      Todos
+    </a>
+  </li>
+</ul>
+
+{# ── Barra de pesquisa HTMX ─────────────────────────────────── #}
+<div class="mb-3">
+  <input
+    type="search"
+    class="form-control form-control-sm"
+    placeholder="Buscar por cliente ou nº documento…"
+    name="q"
+    hx-get="{% url 'financeiro:contarec_buscar' %}?status={{ status_filtro }}"
+    hx-trigger="input changed delay:300ms, search"
+    hx-target="#tabela-wrapper"
+    hx-include="this"
+    autocomplete="off">
+</div>
+
+{# ── Tabela ──────────────────────────────────────────────────── #}
+{% include "financeiro/partials/tabela_contarec.html" %}
+
+{% endblock %}

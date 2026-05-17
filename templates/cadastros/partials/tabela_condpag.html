@@ -1,0 +1,31 @@
+<div class="card form-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Descrição</th>
+          <th style="width:120px">Condição</th>
+          <th style="width:70px">Dias</th>
+          <th style="width:80px">Parcelas</th>
+          <th style="width:80px">Situação</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in condpags %}
+          {% include "cadastros/partials/linha_condpag.html" %}
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Nenhum registro encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if condpags %}
+  <div class="card-footer text-muted small py-1 px-3">{{ condpags|length }} registro(s)</div>
+  {% endif %}
+</div>

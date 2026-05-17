@@ -1,0 +1,30 @@
+<tr id="grupo-{{ g.pk }}" class="{% if g.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ g.pk }}</td>
+  <td>
+    <a href="{% url 'cadastros:grupo_edit' g.pk %}" class="text-decoration-none fw-semibold">
+      {{ g.descricao }}
+    </a>
+  </td>
+  <td class="small text-muted">{{ g.idgrupopai|default:"—" }}</td>
+  <td class="small font-monospace">{{ g.classificacao|default:"—" }}</td>
+  <td>
+    {% if g.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'cadastros:grupo_edit' g.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button class="btn btn-sm {% if g.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        hx-post="{% url 'cadastros:grupo_inativar' g.pk %}"
+        hx-target="#grupo-{{ g.pk }}" hx-swap="outerHTML"
+        hx-confirm="{% if g.inativo %}Reativar {{ g.descricao }}?{% else %}Inativar {{ g.descricao }}?{% endif %}">
+        <i class="bi {% if g.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

@@ -1,0 +1,14 @@
+{% if itens %}
+<div class="lookup-dropdown">
+  <div class="list-group list-group-flush">
+    {% for i in itens %}
+    <button type="button" class="list-group-item list-group-item-action"
+      onclick="selecionarItem({{ i.pk }}, '{{ i.identificacao|default:'' }} - {{ i.descricao }}')">
+      <span class="fw-semibold">{{ i.descricao }}</span>
+      {% if i.identificacao %}<span class="text-muted ms-1 small font-monospace">{{ i.identificacao }}</span>{% endif %}
+      {% if i.grupo %}<span class="badge bg-secondary-subtle text-secondary ms-1 small">{{ i.grupo }}</span>{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

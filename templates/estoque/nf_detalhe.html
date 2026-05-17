@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}NF {{ nf.numeronf }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:nf_list' %}">NFs de Entrada</a></li>
+<li class="breadcrumb-item active">NF {{ nf.numeronf }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ── #}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h5 class="mb-0">
+      <i class="bi bi-receipt me-2 text-success"></i>
+      NF <span class="font-monospace">{{ nf.numeronf }}</span>
+      {% if nf.serie %}<span class="text-muted small">— Série {{ nf.serie }}</span>{% endif %}
+      <span class="badge ms-2
+        {% if nf.status == 'A' %}bg-warning-subtle text-warning-emphasis
+        {% elif nf.status == 'L' %}bg-success-subtle text-success-emphasis
+        {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+        {{ nf.get_status_display }}
+      </span>
+    </h5>
+    <small class="text-muted">
+      {{ nf.fornecedor.razao|default:nf.fornecedor.nome }}
+      {% if nf.dataemissao %}&bull; Emissão: {{ nf.dataemissao|date:"d/m/Y" }}{% endif %}
+      {% if nf.dataentrada %}&bull; Entrada: {{ nf.dataentrada|date:"d/m/Y" }}{% endif %}
+      &bull; Lançado por {{ nf.usuariolanc }}
+    </small>
+  </div>
+
+  <div class="d-flex gap-2">
+    {% if not bloqueada %}
+    <a href="{% url 'estoque:nf_editar' nf.pk %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="post" action="{% url 'estoque:nf_lancar' nf.pk %}"
+          onsubmit="return confirm('Registrar a NF? Serão gerados movimentos de estoque e contas a pagar. Esta ação não pode ser desfeita.')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-success">
+        <i class="bi bi-check2-all me-1"></i>Registrar NF
+      </button>
+    </form>
+    <form method="post" action="{% url 'estoque:nf_cancelar' nf.pk %}"
+          onsubmit="return confirm('Cancelar esta NF?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-x-circle me-1"></i>Cancelar
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'estoque:nf_espelho' nf.pk %}" target="_blank"
+       class="btn btn-sm btn-outline-dark" title="Espelho PDF">
+      <i class="bi bi-printer me-1"></i>Espelho
+    </a>
+  </div>
+</div>
+
+{% if nf.chaveacesso %}
+<div class="alert alert-light border py-2 small mb-3 d-flex align-items-center gap-2 font-monospace"
+     style="letter-spacing:.04em; overflow-x:auto;">
+  <i class="bi bi-upc-scan text-secondary flex-shrink-0" title="Chave de Acesso NF-e"></i>
+  <span id="chave-acesso" class="user-select-all">{{ nf.chaveacesso }}</span>
+  <button type="button" class="btn btn-xs btn-outline-secondary ms-1 flex-shrink-0 py-0 px-2"
+          onclick="navigator.clipboard.writeText('{{ nf.chaveacesso }}').then(()=>this.textContent='✓ Copiado').catch(()=>{})"
+          style="font-size:.7rem;">
+    <i class="bi bi-clipboard"></i> Copiar
+  </button>
+</div>
+{% endif %}
+
+{% if nf.observacao %}
+<div class="alert alert-secondary py-2 small mb-3">
+  <i class="bi bi-chat-left-text me-1"></i>{{ nf.observacao }}
+</div>
+{% endif %}
+
+{# ── Info adicional ── #}
+{% if nf.condicao or nf.metodo %}
+<div class="row g-2 mb-3">
+  {% if nf.condicao %}
+  <div class="col-auto">
+    <div class="card form-card text-center px-3 py-2">
+      <div class="small text-muted">Condição</div>
+      <div class="fw-semibold small">{{ nf.condicao.descricao }}</div>
+    </div>
+  </div>
+  {% endif %}
+  {% if nf.metodo %}
+  <div class="col-auto">
+    <div class="card form-card text-center px-3 py-2">
+      <div class="small text-muted">Método</div>
+      <div class="fw-semibold small">{{ nf.metodo.descricao }}</div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-auto">
+    <div class="card form-card text-center px-3 py-2">
+      <div class="small text-muted">Total NF</div>
+      <div class="fw-bold font-monospace">R$ {{ nf.valortotalnf|floatformat:2 }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Itens ── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-list-ul me-1 text-success"></i>Itens ({{ itens|length }})
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th>Descrição</th>
+          <th style="width:120px">Identificação</th>
+          <th style="width:90px" class="text-end">Qtd</th>
+          <th style="width:110px" class="text-end">Valor Unit.</th>
+          <th style="width:110px" class="text-end">Total</th>
+          <th style="width:70px" class="text-center">Estoque</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in itens %}
+        <tr>
+          <td>{{ it.descricao_item|default:it.identificacao }}</td>
+          <td class="text-muted small font-monospace">{{ it.identificacao|default:"—" }}</td>
+          <td class="text-end font-monospace">{{ it.quantidade|floatformat:3 }}</td>
+          <td class="text-end font-monospace">R$ {{ it.valorunitario|floatformat:4 }}</td>
+          <td class="text-end font-monospace fw-semibold">R$ {{ it.valortotal|floatformat:2 }}</td>
+          <td class="text-center">
+            {% if it.item and it.item.controla_estoque %}
+              <i class="bi bi-check-circle-fill text-success" title="Controla estoque — gera movimento"></i>
+            {% else %}
+              <i class="bi bi-dash-circle text-muted" title="Não controla estoque"></i>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-3 small">Nenhum item.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr>
+          <td colspan="4" class="text-end fw-semibold small">Total:</td>
+          <td class="text-end font-monospace fw-bold">R$ {{ nf.valortotalitens|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{# ── Parcelas ── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-calendar3 me-1 text-primary"></i>Parcelas ({{ parcelas|length }})
+    {% if nf.status == 'L' %}
+    <span class="badge bg-success-subtle text-success-emphasis ms-2" style="font-size:.7rem;">
+      <i class="bi bi-check me-1"></i>Contas a pagar geradas
+    </span>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px" class="text-center">Parcela</th>
+          <th style="width:120px">Vencimento</th>
+          <th style="width:120px" class="text-end">Valor</th>
+          {% if nf.status == 'L' %}
+          <th style="width:100px" class="text-center">Conta Pagar</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in parcelas %}
+        <tr>
+          <td class="text-center font-monospace">{{ p.parcela }}</td>
+          <td class="font-monospace small">{{ p.vencimento|date:"d/m/Y" }}</td>
+          <td class="text-end font-monospace">R$ {{ p.valor|floatformat:2 }}</td>
+          {% if nf.status == 'L' %}
+          <td class="text-center">
+            {% if p.idcontapag %}
+            <span class="badge bg-secondary-subtle text-secondary-emphasis" style="font-size:.7rem;">#{{ p.idcontapag }}</span>
+            {% else %}—{% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-3 small">Sem parcelas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if nf.status == 'L' %}
+<div class="alert alert-success-subtle border-success-subtle py-2 small d-flex align-items-center gap-2">
+  <i class="bi bi-check-circle-fill text-success fs-5"></i>
+  <div>
+    <strong>NF lançada.</strong>
+    Movimentos de estoque e contas a pagar gerados com sucesso.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

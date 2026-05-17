@@ -1,0 +1,217 @@
+{% extends "relatorios/base_pdf.html" %}
+{% block title %}NF {{ nf.numeronf }}{% endblock %}
+{% block titulo %}NOTA FISCAL DE ENTRADA{% endblock %}
+{% block subtitulo %}
+  NF Nº {{ nf.numeronf }}{% if nf.serie %} — Série {{ nf.serie }}{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-item label {
+    display: block;
+    font-size: 7pt;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .3pt;
+  }
+  .info-item span { font-size: 8.5pt; font-weight: bold; }
+  .info-item.wide { grid-column: span 2; }
+  .chave-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 4pt 7pt;
+    font-size: 7.5pt;
+    font-family: 'Courier New', monospace;
+    letter-spacing: .05em;
+    margin-bottom: 8pt;
+    word-break: break-all;
+  }
+  .obs-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 5pt 7pt;
+    font-size: 8pt;
+    margin-bottom: 8pt;
+  }
+  .totais-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2pt 16pt;
+    max-width: 250pt;
+    margin-left: auto;
+    font-size: 8.5pt;
+  }
+  .totais-grid .label { color: #6c757d; }
+  .totais-grid .valor { text-align: right; font-family: 'Courier New', monospace; }
+  .totais-grid .total-final { font-weight: bold; font-size: 9.5pt; border-top: 1.5px solid #212529; padding-top: 3pt; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Chave de Acesso ─────────────────────────────────────────────── #}
+{% if nf.chaveacesso %}
+<div class="chave-box">
+  <strong>Chave de Acesso NF-e:</strong> {{ nf.chaveacesso }}
+</div>
+{% endif %}
+
+{# ── Dados da NF ─────────────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Dados da Nota Fiscal</div>
+  <div style="border:1px solid #dee2e6; border-top:none; padding:8pt;">
+    <div class="info-grid-4">
+      <div class="info-item wide">
+        <label>Fornecedor</label>
+        <span>{{ nf.fornecedor.razao|default:nf.fornecedor.nome }}</span>
+      </div>
+      <div class="info-item">
+        <label>Status</label>
+        <span>{{ nf.get_status_display }}</span>
+      </div>
+      <div class="info-item">
+        <label>CNPJ Fornecedor</label>
+        <span>{{ nf.fornecedor.cnpjcpf|default:"—" }}</span>
+      </div>
+    </div>
+    <div class="info-grid-4">
+      <div class="info-item">
+        <label>Data de Emissão</label>
+        <span>{{ nf.dataemissao|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <label>Data de Entrada</label>
+        <span>{{ nf.dataentrada|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <label>CFOP</label>
+        <span>{% if nf.cfop %}{{ nf.cfop.codigo }} — {{ nf.cfop.descricao }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Tipo de Frete</label>
+        <span>{{ nf.get_tipofrete_display|default:"—" }}</span>
+      </div>
+    </div>
+    <div class="info-grid-3">
+      <div class="info-item">
+        <label>Cond. Pagamento</label>
+        <span>{% if nf.condicao %}{{ nf.condicao.descricao }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Método</label>
+        <span>{% if nf.metodo %}{{ nf.metodo.descricao }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Lançado por</label>
+        <span>{{ nf.usuariolanc|default:"—" }}</span>
+      </div>
+    </div>
+    {% if nf.observacao %}
+    <div class="obs-box"><strong>Observação:</strong> {{ nf.observacao }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Itens ────────────────────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Itens da Nota</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:80pt">Identificação</th>
+        <th>Descrição</th>
+        <th class="text-center" style="width:40pt">Qtd</th>
+        <th class="text-end" style="width:60pt">Val. Unit.</th>
+        <th class="text-end" style="width:45pt">IPI</th>
+        <th class="text-end" style="width:45pt">ICMS</th>
+        <th class="text-end" style="width:60pt">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in itens %}
+      <tr>
+        <td class="font-mono">{{ it.identificacao }}</td>
+        <td>{{ it.descricao_item|default:it.item.descricao }}</td>
+        <td class="text-center">{{ it.quantidade|floatformat:3 }}</td>
+        <td class="text-end font-mono">{{ it.valorunitario|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ it.ipi|floatformat:2 }}</td>
+        <td class="text-end font-mono">{{ it.icms|floatformat:2 }}</td>
+        <td class="text-end font-mono fw-bold">{{ it.valortotal|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted">Nenhum item.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Totais ───────────────────────────────────────────────────────── #}
+<div class="secao">
+  <div class="totais-grid">
+    <span class="label">Subtotal Itens</span>
+    <span class="valor">R$ {{ nf.valortotalitens|floatformat:2 }}</span>
+    {% if nf.valorfrete %}
+    <span class="label">Frete</span>
+    <span class="valor">R$ {{ nf.valorfrete|floatformat:2 }}</span>
+    {% endif %}
+    {% if nf.valoripi %}
+    <span class="label">IPI</span>
+    <span class="valor">R$ {{ nf.valoripi|floatformat:2 }}</span>
+    {% endif %}
+    {% if nf.valoricms %}
+    <span class="label">ICMS</span>
+    <span class="valor">R$ {{ nf.valoricms|floatformat:2 }}</span>
+    {% endif %}
+    {% if nf.valoracrecimo %}
+    <span class="label">Acréscimo</span>
+    <span class="valor">R$ {{ nf.valoracrecimo|floatformat:2 }}</span>
+    {% endif %}
+    {% if nf.valordesconto %}
+    <span class="label">Desconto</span>
+    <span class="valor">— R$ {{ nf.valordesconto|floatformat:2 }}</span>
+    {% endif %}
+    <span class="label total-final">TOTAL DA NF</span>
+    <span class="valor total-final">R$ {{ nf.valortotalnf|floatformat:2 }}</span>
+  </div>
+</div>
+
+{# ── Parcelas ─────────────────────────────────────────────────────── #}
+{% if parcelas %}
+<div class="secao">
+  <div class="secao-titulo">Condições de Pagamento</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50pt">Parcela</th>
+        <th style="width:100pt">Vencimento</th>
+        <th class="text-end">Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in parcelas %}
+      <tr>
+        <td class="text-center font-mono">{{ p.parcela }}</td>
+        <td>{{ p.vencimento|date:"d/m/Y" }}</td>
+        <td class="text-end font-mono">R$ {{ p.valor|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

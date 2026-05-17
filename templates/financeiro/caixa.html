@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}Caixa{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Caixa</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-safe2 me-2 text-primary"></i>Controle de Caixa</h5>
+  {% if sessao %}
+  <span class="badge bg-success fs-6 px-3 py-2">
+    <i class="bi bi-unlock-fill me-1"></i>Caixa Aberto
+  </span>
+  {% else %}
+  <span class="badge bg-secondary fs-6 px-3 py-2">
+    <i class="bi bi-lock-fill me-1"></i>Caixa Fechado
+  </span>
+  {% endif %}
+</div>
+
+{% if not sessao %}
+{# ── Caixa fechado: formulário de abertura ─────────────────── #}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card form-card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <i class="bi bi-safe2 me-2"></i>{% if reabrir %}Reabrir Caixa{% else %}Abertura de Caixa{% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'financeiro:caixa_abrir' %}">
+          {% csrf_token %}
+          {% if reabrir %}
+          <div class="alert alert-info py-2 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Saldo atual do dia: <strong>R$ {{ saldo_atual|floatformat:2 }}</strong><br>
+            A reabertura continuará a partir deste saldo.
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label">{{ form_abertura.saldo_inicial.label }}</label>
+            {{ form_abertura.saldo_inicial }}
+          </div>
+          {% endif %}
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-unlock me-1"></i>{% if reabrir %}Reabrir Caixa{% else %}Abrir Caixa{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="card-footer text-muted small">
+        <i class="bi bi-person-circle me-1"></i>Operador: {{ request.user.username }}
+        &nbsp;|&nbsp;
+        <i class="bi bi-calendar3 me-1"></i>{{ hoje|date:"d/m/Y" }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+{# ── Caixa aberto ──────────────────────────────────────────── #}
+
+{# Header da sessão #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>Abertura: <strong>{{ sessao.usuabre }}</strong></span>
+      </div>
+      <div class="col-auto">
+        <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ sessao.dataabre|date:"d/m/Y" }} {{ sessao.horaabre }}</span>
+      </div>
+      <div class="col-auto">
+        <span class="text-muted small">Sessão <strong>#{{ sessao.pk }}</strong></span>
+      </div>
+      <div class="col text-end">
+        <span class="fw-bold {% if saldo_atual >= 0 %}text-success{% else %}text-danger{% endif %} fs-5">
+          Saldo: R$ {{ saldo_atual|floatformat:2 }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Barra de ações #}
+<div x-data="{
+  modal: '',
+  fecharModal() { this.modal = '' }
+}" class="mb-3">
+
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+
+    {# Seletor de Projeto ativo #}
+    <form method="post" action="{% url 'financeiro:caixa_projeto_selecionar' %}" class="d-flex align-items-center gap-1">
+      {% csrf_token %}
+      <i class="bi bi-folder2-open text-muted" title="Projeto"></i>
+      <select name="projeto_id" class="form-select form-select-sm" style="min-width:160px; max-width:220px;"
+              onchange="this.form.submit()" title="Projeto ativo">
+        <option value="">— Sem projeto —</option>
+        {% for p in projetos %}
+        <option value="{{ p.pk }}" {% if projeto_ativo and projeto_ativo.pk == p.pk %}selected{% endif %}>
+          {{ p.codigo }} — {{ p.descricao }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <div class="vr mx-1"></div>
+
+    <button class="btn btn-outline-success btn-sm" @click="modal='entrada'">
+      <i class="bi bi-arrow-down-circle-fill"></i> Entrada
+    </button>
+    <button class="btn btn-outline-danger btn-sm" @click="modal='saida'">
+      <i class="bi bi-arrow-up-circle-fill"></i> Saída
+    </button>
+    <button class="btn btn-outline-warning btn-sm" @click="modal='sangria'">
+      <i class="bi bi-cash-coin"></i> Sangria
+    </button>
+    <a href="{% url 'financeiro:caixa_recebimento' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-arrow-down-circle"></i> Recebimento
+    </a>
+    <a href="{% url 'financeiro:caixa_pagamento' %}" class="btn btn-danger btn-sm">
+      <i class="bi bi-arrow-up-circle"></i> Pagamento
+    </a>
+    <div class="ms-auto d-flex gap-2">
+      <a href="{% url 'financeiro:caixa_relatorio_fechamento' sessao.pk %}"
+         target="_blank" class="btn btn-outline-secondary btn-sm" title="Imprimir relatório da sessão">
+        <i class="bi bi-printer"></i> Imprimir
+      </a>
+      <form method="post" action="{% url 'financeiro:caixa_fechar' %}"
+            onsubmit="return confirm('Confirmar fechamento do caixa?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm">
+          <i class="bi bi-lock-fill"></i> Fechar Caixa
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {# Modal Entrada #}
+  <div x-show="modal=='entrada'" x-transition
+       class="modal-overlay" @click.self="fecharModal()" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header-bar">
+        <span><i class="bi bi-arrow-down-circle-fill text-success me-2"></i>Entrada</span>
+        <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+      </div>
+      <div class="modal-body-inner">
+        <form method="post" action="{% url 'financeiro:caixa_entrada' %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label small">{{ form_entrada.descricao.label }}</label>
+            {{ form_entrada.descricao }}
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label small">{{ form_entrada.valor.label }}</label>
+              {{ form_entrada.valor }}
+            </div>
+            <div class="col">
+              <label class="form-label small">{{ form_entrada.documento.label }}</label>
+              {{ form_entrada.documento }}
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">{{ form_entrada.conta.label }}</label>
+            {{ form_entrada.conta }}
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-sm btn-secondary" @click="fecharModal()">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# Modal Saída #}
+  <div x-show="modal=='saida'" x-transition
+       class="modal-overlay" @click.self="fecharModal()" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header-bar">
+        <span><i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>Saída</span>
+        <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+      </div>
+      <div class="modal-body-inner">
+        <form method="post" action="{% url 'financeiro:caixa_saida' %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label small">{{ form_saida.descricao.label }}</label>
+            {{ form_saida.descricao }}
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label small">{{ form_saida.valor.label }}</label>
+              {{ form_saida.valor }}
+            </div>
+            <div class="col">
+              <label class="form-label small">{{ form_saida.documento.label }}</label>
+              {{ form_saida.documento }}
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">{{ form_saida.conta.label }}</label>
+            {{ form_saida.conta }}
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-sm btn-secondary" @click="fecharModal()">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-check-lg"></i> Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# Modal Sangria #}
+  <div x-show="modal=='sangria'" x-transition
+       class="modal-overlay" @click.self="fecharModal()" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header-bar">
+        <span><i class="bi bi-cash-coin text-warning me-2"></i>Sangria de Caixa</span>
+        <button type="button" class="btn-close btn-close-white" @click="fecharModal()"></button>
+      </div>
+      <div class="modal-body-inner">
+        <form method="post" action="{% url 'financeiro:caixa_sangria' %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label class="form-label small">{{ form_sangria.descricao.label }}</label>
+            {{ form_sangria.descricao }}
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label class="form-label small">{{ form_sangria.valor.label }}</label>
+              {{ form_sangria.valor }}
+            </div>
+            <div class="col">
+              <label class="form-label small">{{ form_sangria.portador.label }}</label>
+              {{ form_sangria.portador }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-sm btn-secondary" @click="fecharModal()">Cancelar</button>
+            <button type="submit" class="btn btn-sm btn-warning"><i class="bi bi-check-lg"></i> Confirmar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>{# /x-data #}
+
+{# Tabela de movimentos #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 d-flex align-items-center">
+    <span class="fw-semibold"><i class="bi bi-list-ul me-2"></i>Movimentos da Sessão</span>
+    <span class="badge bg-secondary ms-2">{{ movimentos|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:50px">#</th>
+          <th style="width:80px">Data</th>
+          <th>Descrição</th>
+          <th style="width:110px">Tipo</th>
+          <th style="width:65px" class="text-center">Sit.</th>
+          <th style="width:60px" class="text-center">D/C</th>
+          <th style="width:90px">Documento</th>
+          <th>Cli./Forn.</th>
+          <th style="width:110px">Projeto</th>
+          <th style="width:100px" class="text-end">Valor</th>
+          <th style="width:100px" class="text-end">Saldo</th>
+          <th style="width:50px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimentos %}
+        <tr class="{% if m.status == 'C' %}text-muted text-decoration-line-through{% endif %}">
+          <td class="text-muted small">{{ m.pk }}</td>
+          <td class="small">{{ m.data|date:"d/m" }}</td>
+          <td class="small">{{ m.descricao }}</td>
+          <td>
+            <span class="badge
+              {% if m.tipobaixa == 'ABERTURA' %}bg-primary-subtle text-primary-emphasis
+              {% elif m.tipobaixa == 'FECHAMENTO' %}bg-secondary-subtle text-secondary-emphasis
+              {% elif m.tipobaixa == 'ENTRADA' %}bg-success-subtle text-success-emphasis
+              {% elif m.tipobaixa == 'SAIDA' %}bg-danger-subtle text-danger-emphasis
+              {% elif m.tipobaixa == 'RECEBIMENTO' %}bg-success-subtle text-success-emphasis
+              {% elif m.tipobaixa == 'PAGAMENTO' %}bg-danger-subtle text-danger-emphasis
+              {% elif m.tipobaixa == 'SANGRIA' %}bg-warning-subtle text-warning-emphasis
+              {% elif m.tipobaixa == 'CANCELAMENTO' %}bg-dark-subtle text-dark-emphasis
+              {% else %}bg-light text-dark{% endif %}">
+              {{ m.tipobaixa }}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if m.status == 'C' %}
+              <span class="badge bg-danger">C</span>
+            {% else %}
+              <span class="badge bg-success-subtle text-success-emphasis">A</span>
+            {% endif %}
+          </td>
+          <td class="text-center fw-bold {% if m.tipo == 'E' %}text-success{% else %}text-danger{% endif %}">
+            {{ m.tipo }}
+          </td>
+          <td class="small font-monospace">{{ m.documento|default:"—" }}</td>
+          <td class="small">{% if m.cliforemp %}{{ m.cliforemp.razao|default:m.cliforemp.nome|truncatechars:30 }}{% else %}—{% endif %}</td>
+          <td class="small text-muted">{% if m.projeto %}<span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ m.projeto.codigo }}</span>{% else %}—{% endif %}</td>
+          <td class="text-end small {% if m.tipo == 'E' %}text-success{% else %}text-danger{% endif %}">
+            {% if m.tipo == 'E' %}+{% else %}-{% endif %}{{ m.valor|floatformat:2 }}
+          </td>
+          <td class="text-end small fw-semibold {% if m.saldo >= 0 %}text-dark{% else %}text-danger{% endif %}">
+            {{ m.saldo|floatformat:2 }}
+          </td>
+          <td>
+            {% if m.status == 'A' and m.tipobaixa != 'ABERTURA' and m.tipobaixa != 'FECHAMENTO' and m.tipobaixa != 'CANCELAMENTO' %}
+            <form method="post" action="{% url 'financeiro:caixa_cancelar_mov' m.pk %}"
+                  onsubmit="return confirm('Cancelar o movimento #{{ m.pk }}?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger p-0 px-1" title="Cancelar">
+                <i class="bi bi-slash-circle" style="font-size:.75rem;"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="12" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>Nenhum movimento nesta sessão.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# Resumo por tipo #}
+{% if resumo %}
+<div class="row g-3">
+  <div class="col-md-7">
+    <div class="card form-card">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-bar-chart-line me-2"></i>Resumo por Tipo</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Tipo</th>
+              <th class="text-end">Créditos</th>
+              <th class="text-end">Débitos</th>
+              <th class="text-end">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in resumo %}
+            <tr>
+              <td><span class="badge bg-light text-dark border">{{ r.tipobaixa }}</span></td>
+              <td class="text-end text-success small">{% if r.creditos %}{{ r.creditos|floatformat:2 }}{% else %}—{% endif %}</td>
+              <td class="text-end text-danger small">{% if r.debitos %}{{ r.debitos|floatformat:2 }}{% else %}—{% endif %}</td>
+              <td class="text-end fw-semibold small {% if r.saldo >= 0 %}text-dark{% else %}text-danger{% endif %}">{{ r.saldo|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light fw-bold">
+            <tr>
+              <td>TOTAL</td>
+              <td class="text-end text-success">{{ total_creditos|floatformat:2 }}</td>
+              <td class="text-end text-danger">{{ total_debitos|floatformat:2 }}</td>
+              <td class="text-end {% if saldo_atual >= 0 %}text-dark{% else %}text-danger{% endif %}">{{ saldo_atual|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card form-card h-100">
+      <div class="card-header py-2">
+        <span class="fw-semibold"><i class="bi bi-calculator me-2"></i>Posição do Caixa</span>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted small">Total Créditos</span>
+          <span class="text-success fw-semibold">R$ {{ total_creditos|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted small">Total Débitos</span>
+          <span class="text-danger fw-semibold">R$ {{ total_debitos|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 mt-1">
+          <span class="fw-bold">Saldo Atual</span>
+          <span class="fw-bold fs-5 {% if saldo_atual >= 0 %}text-success{% else %}text-danger{% endif %}">
+            R$ {{ saldo_atual|floatformat:2 }}
+          </span>
+        </div>
+        <hr class="my-2">
+        <div class="text-muted small">
+          <i class="bi bi-person-circle me-1"></i>{{ sessao.usuabre }}
+          &nbsp;|&nbsp;
+          <i class="bi bi-calendar3 me-1"></i>{{ sessao.dataabre|date:"d/m/Y" }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}{# /sessao #}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1050;
+}
+.modal-box {
+  background: #fff; border-radius: .5rem; width: 100%; max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+.modal-header-bar {
+  background: #343a40; color: #fff; padding: .75rem 1rem;
+  border-radius: .5rem .5rem 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-body-inner { padding: 1.25rem; }
+</style>
+{% endblock %}

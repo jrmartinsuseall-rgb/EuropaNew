@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'core:usuario_list' %}">Usuários</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-person-gear me-2 text-primary"></i>{{ titulo }}
+  </h5>
+  {% if objeto %}
+  <span class="text-muted small">Registro #{{ objeto.pk }}</span>
+  {% endif %}
+</div>
+
+<form method="post" autocomplete="off">
+  {% csrf_token %}
+
+  <div class="card form-card mb-3">
+    <div class="card-header fw-semibold small">
+      <i class="bi bi-person me-1"></i> Dados do Usuário
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+
+        <div class="col-md-3">
+          <label class="form-label">Login <span class="text-danger">*</span></label>
+          {{ user_form.username }}
+          {% if user_form.username.errors %}
+          <div class="text-danger small">{{ user_form.username.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Nome</label>
+          {{ user_form.first_name }}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Sobrenome</label>
+          {{ user_form.last_name }}
+        </div>
+
+        <div class="col-md-5">
+          <label class="form-label">E-mail</label>
+          {{ user_form.email }}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Nova Senha</label>
+          {{ user_form.password1 }}
+          {% if user_form.password1.errors %}
+          <div class="text-danger small">{{ user_form.password1.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Confirme a Senha</label>
+          {{ user_form.password2 }}
+          {% if user_form.password2.errors %}
+          <div class="text-danger small">{{ user_form.password2.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ user_form.is_active }}
+            <label class="form-check-label" for="{{ user_form.is_active.id_for_label }}">Ativo</label>
+          </div>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+          <div class="form-check mb-2">
+            {{ user_form.is_superuser }}
+            <label class="form-check-label" for="{{ user_form.is_superuser.id_for_label }}">Superusuário</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="card form-card mb-3">
+    <div class="card-header fw-semibold small">
+      <i class="bi bi-shield-lock me-1"></i> Permissões de Acesso
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+
+        <div class="col-md-4">
+          <label class="form-label">Empresa <span class="text-danger">*</span></label>
+          {{ perfil_form.empresa }}
+          {% if perfil_form.empresa.errors %}
+          <div class="text-danger small">{{ perfil_form.empresa.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Nível Admin</label>
+          {{ perfil_form.nivel_adm }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">ID Vendedor</label>
+          {{ perfil_form.idvendedor }}
+        </div>
+
+        <div class="col-12">
+          <hr class="my-1"><small class="text-muted">Módulos liberados</small>
+        </div>
+
+        <div class="col-auto">
+          <div class="form-check">
+            {{ perfil_form.acesso_cadastro }}
+            <label class="form-check-label" for="{{ perfil_form.acesso_cadastro.id_for_label }}">
+              <i class="bi bi-people text-primary"></i> Cadastros
+            </label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ perfil_form.acesso_administrativo }}
+            <label class="form-check-label" for="{{ perfil_form.acesso_administrativo.id_for_label }}">
+              <i class="bi bi-gear text-secondary"></i> Administrativo
+            </label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ perfil_form.acesso_televendas }}
+            <label class="form-check-label" for="{{ perfil_form.acesso_televendas.id_for_label }}">
+              <i class="bi bi-headset text-info"></i> CRM
+            </label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ perfil_form.acesso_financeiro }}
+            <label class="form-check-label" for="{{ perfil_form.acesso_financeiro.id_for_label }}">
+              <i class="bi bi-cash text-success"></i> Financeiro
+            </label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <div class="form-check">
+            {{ perfil_form.acesso_estoque }}
+            <label class="form-check-label" for="{{ perfil_form.acesso_estoque.id_for_label }}">
+              <i class="bi bi-box-seam text-warning"></i> Estoque
+            </label>
+          </div>
+        </div>
+
+        <div class="col-12 mt-2">
+          <div class="form-check">
+            {{ perfil_form.inativo }}
+            <label class="form-check-label text-danger" for="{{ perfil_form.inativo.id_for_label }}">
+              <i class="bi bi-slash-circle"></i> Usuário Inativo
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> Salvar
+    </button>
+    <a href="{% url 'core:usuario_list' %}" class="btn btn-secondary ms-auto">
+      <i class="bi bi-x-lg"></i> Cancelar
+    </a>
+  </div>
+
+</form>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Licenças de Uso{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Licenças</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-shield-lock me-2 text-primary"></i>Licenças de Uso</h5>
+</div>
+
+<div class="card form-card">
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0" style="font-size:.85rem;">
+      <thead class="table-light">
+        <tr>
+          <th>Empresa</th>
+          <th>CNPJ</th>
+          <th class="text-center">Situação</th>
+          <th class="text-center">Válida de</th>
+          <th class="text-center">Válida até</th>
+          <th class="text-center">Máx. Usuários</th>
+          <th class="text-center">Dias restantes</th>
+          <th style="width:90px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lista %}
+        <tr>
+          <td class="fw-semibold">{{ row.empresa.razao }}</td>
+          <td class="font-monospace text-muted small">{{ row.empresa.cnpj }}</td>
+          <td class="text-center">
+            {% if not row.licenca %}
+              <span class="badge bg-secondary">Sem licença</span>
+            {% elif not row.licenca.ativa %}
+              <span class="badge bg-warning text-dark">Inativa</span>
+            {% elif row.licenca.is_valid %}
+              {% if row.licenca.dias_para_expirar <= 30 %}
+                <span class="badge bg-warning text-dark">Expira em breve</span>
+              {% else %}
+                <span class="badge bg-success">Ativa</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-danger">Expirada</span>
+            {% endif %}
+          </td>
+          <td class="text-center font-monospace small">
+            {% if row.licenca %}{{ row.licenca.valid_from|date:"d/m/Y" }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center font-monospace small">
+            {% if row.licenca %}{{ row.licenca.valid_until|date:"d/m/Y" }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if row.licenca %}{{ row.licenca.max_usuarios }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if row.licenca and row.licenca.is_valid %}
+              <span class="{% if row.licenca.dias_para_expirar <= 30 %}text-warning fw-semibold{% endif %}">
+                {{ row.licenca.dias_para_expirar }} dias
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'core:licenca_edit' row.empresa.pk %}"
+               class="btn btn-xs btn-outline-primary px-2" style="font-size:.78rem;">
+              <i class="bi bi-pencil"></i> {% if row.licenca %}Editar{% else %}Criar{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-3">Nenhuma empresa cadastrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

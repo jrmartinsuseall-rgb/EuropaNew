@@ -1,0 +1,52 @@
+<div class="card form-card">
+  <div class="card-header py-2 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small">
+      <i class="bi bi-list-ul me-1 text-warning"></i>Itens
+    </span>
+    <span class="text-muted small">{{ itens|length }} item(ns)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:110px">Identificação</th>
+          <th>Descrição</th>
+          <th style="width:170px">Grupo</th>
+          <th style="width:60px" class="text-center">Unid.</th>
+          <th style="width:110px" class="text-end">Saldo Estoque</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr class="{% if item.inativo %}text-muted{% endif %}">
+          <td class="font-monospace small">{{ item.identificacao|default:"—" }}</td>
+          <td>
+            {{ item.descricao }}
+            {% if item.inativo %}<span class="badge bg-secondary ms-1" style="font-size:.65rem;">Inativo</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ item.grupo.descricao|default:"—" }}</td>
+          <td class="text-center text-muted small">{{ item.unidade }}</td>
+          <td class="text-end font-monospace fw-semibold
+            {% if item.saldoestoque <= 0 %}text-danger
+            {% else %}text-success{% endif %}">
+            {{ item.saldoestoque|floatformat:3 }}
+          </td>
+          <td class="text-center">
+            <a href="{% url 'estoque:item_extrato' item.pk %}"
+               class="btn btn-xs btn-outline-warning p-0 px-2 py-0"
+               title="Ver extrato de movimentação"
+               style="font-size:.75rem;">
+              <i class="bi bi-clock-history"></i> Extrato
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4 small">Nenhum item encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

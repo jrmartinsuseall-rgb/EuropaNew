@@ -1,0 +1,29 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Variáveis de ambiente — NUNCA commitar!
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Django
+*.log
+db.sqlite3
+staticfiles/
+media/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Windows
+Thumbs.db
+desktop.ini

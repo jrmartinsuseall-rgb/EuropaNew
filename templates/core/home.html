@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Início{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Início</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .home-module-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    padding: 0;
+  }
+  .home-module-card:hover .card {
+    transform: translateY(-3px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important;
+  }
+  .home-module-card .card {
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .home-module-icon {
+    flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% with perfil=request.user.perfil|default_if_none:None %}
+
+<div class="position-relative" style="min-height: calc(100vh - 120px); overflow: hidden;">
+
+  <div class="position-absolute top-50 start-50 translate-middle text-center" style="pointer-events:none; z-index:0; opacity:.04;">
+    <i class="bi bi-globe2" style="font-size: 38rem; line-height:1; color: #0d6efd;"></i>
+  </div>
+
+  <div class="position-relative" style="z-index:1;">
+
+    <div class="mb-5">
+      <h4 class="fw-light text-secondary mb-1">Bem-vindo,</h4>
+      <h2 class="fw-bold text-dark mb-0">{{ request.user.get_full_name|default:request.user.username }}</h2>
+      {% if empresa_atual %}
+      <p class="text-muted mt-1 mb-0">
+        <i class="bi bi-building me-1 text-primary"></i>{{ empresa_atual.razao }}
+      </p>
+      {% endif %}
+    </div>
+
+    <div class="row g-3">
+
+      {% if request.user.is_superuser or perfil.acesso_cadastro %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_cad', '{% url 'cadastros:cliente_list' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-primary-subtle text-primary rounded-3 p-3">
+                <i class="bi bi-people fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Cadastros</div>
+                <small class="text-muted">Clientes, Itens, Grupos</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+      {% if request.user.is_superuser or perfil.acesso_financeiro %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_fin', '{% url 'financeiro:contarec_list' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-success-subtle text-success rounded-3 p-3">
+                <i class="bi bi-cash-stack fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Financeiro</div>
+                <small class="text-muted">Receber, Pagar, Caixa</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+      {% if request.user.is_superuser or perfil.acesso_televendas %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_vnd', '{% url 'vendas:pedido_list' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-warning-subtle text-warning rounded-3 p-3">
+                <i class="bi bi-cart3 fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Vendas</div>
+                <small class="text-muted">Pedidos</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+      {% if request.user.is_superuser or perfil.acesso_televendas %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_srv', '{% url 'servicos:os_list' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-info-subtle text-info rounded-3 p-3">
+                <i class="bi bi-tools fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Serviços</div>
+                <small class="text-muted">CRM, OS, Roteiros</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+      {% if request.user.is_superuser or perfil.acesso_estoque %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_est', '{% url 'estoque:req_list' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-warning-subtle text-warning rounded-3 p-3">
+                <i class="bi bi-boxes fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Estoque</div>
+                <small class="text-muted">Requisições, NF, Saldo</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+      {% if request.user.is_superuser or perfil.nivel_adm >= 9 %}
+      <div class="col-sm-6 col-lg-3">
+        <button class="home-module-card"
+                onclick="openModule('nav_cfg', '{% url 'core:empresa_edit' %}')">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-3">
+              <div class="home-module-icon bg-secondary-subtle text-secondary rounded-3 p-3">
+                <i class="bi bi-gear fs-3"></i>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark">Configurações</div>
+                <small class="text-muted">Empresa, Usuários</small>
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const NAV_KEYS = ['nav_cad', 'nav_fin', 'nav_vnd', 'nav_srv', 'nav_est', 'nav_cfg'];
+
+function openModule(targetKey, url) {
+  NAV_KEYS.forEach(k => localStorage.setItem(k, k === targetKey ? 'true' : 'false'));
+  window.location.href = url;
+}
+</script>
+{% endblock %}

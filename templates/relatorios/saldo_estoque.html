@@ -1,0 +1,68 @@
+{% extends "relatorios/base_pdf.html" %}
+
+{% block title %}Saldo por Item{% endblock %}
+{% block titulo %}Saldo por Item{% endblock %}
+{% block subtitulo %}{{ subtitulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  @page { size: A4; margin: 1.2cm 1.5cm 1.8cm 1.5cm; }
+  body  { font-size: 8.5pt; }
+  thead th { font-size: 7.5pt; }
+  tbody td { font-size: 8pt; padding: 3pt 4pt; }
+  tfoot td { font-size: 8pt; padding: 3pt 4pt; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; gap:18pt; margin-bottom:10pt;">
+  <div class="info-item">
+    <label>Total de Itens</label>
+    <span>{{ total_itens }}</span>
+  </div>
+  <div class="info-item">
+    <label>Itens com saldo zero ou negativo</label>
+    <span style="color:#dc3545;">
+      {% with zerados=0 %}
+        {% for item in itens %}{% if item.saldoestoque <= 0 %}{% with zerados=zerados|add:1 %}{% endwith %}{% endif %}{% endfor %}
+      {% endwith %}
+      {{ itens|length }}
+    </span>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:90pt">Identificação</th>
+      <th>Descrição</th>
+      <th style="width:130pt">Grupo</th>
+      <th style="width:40pt" class="text-center">Unid.</th>
+      <th style="width:80pt" class="text-end">Saldo Estoque</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in itens %}
+    <tr>
+      <td class="font-mono">{{ item.identificacao|default:"—" }}</td>
+      <td>{{ item.descricao }}{% if item.inativo %} <span style="font-size:6.5pt;color:#6c757d;">[Inativo]</span>{% endif %}</td>
+      <td class="text-muted">{{ item.grupo.descricao|default:"—" }}</td>
+      <td class="text-center text-muted">{{ item.unidade }}</td>
+      <td class="text-end font-mono fw-bold {% if item.saldoestoque <= 0 %}text-danger{% else %}text-success{% endif %}">
+        {{ item.saldoestoque|floatformat:3 }}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="text-center text-muted">Nenhum item encontrado.</td></tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="4" class="text-end">Total de itens listados:</td>
+      <td class="text-end">{{ total_itens }}</td>
+    </tr>
+  </tfoot>
+</table>
+
+{% endblock %}

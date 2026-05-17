@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}{{ os.numero }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'servicos:os_list' %}">OS</a></li>
+<li class="breadcrumb-item active">{{ os.numero }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1050;}
+.modal-box{background:#fff;border-radius:.5rem;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.25);}
+.modal-header-bar{background:#dc3545;color:#fff;padding:.75rem 1rem;border-radius:.5rem .5rem 0 0;display:flex;justify-content:space-between;align-items:center;}
+.modal-body-inner{padding:1.25rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="{ modalCancel: false, modalReagendar: false }">
+
+{# ── Cabeçalho ─────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <div class="row align-items-center g-2">
+      <div class="col">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <h5 class="mb-0 fw-bold font-monospace">{{ os.numero }}</h5>
+          <span class="badge fs-6
+            {% if os.status == 'A' %}bg-primary
+            {% elif os.status == 'P' %}bg-warning text-dark
+            {% elif os.status == 'R' %}bg-success
+            {% elif os.status == 'F' %}bg-info
+            {% else %}bg-danger{% endif %}">
+            {{ os.get_status_display }}
+          </span>
+          {% if os.status == 'C' %}
+          <span class="text-danger small"><i class="bi bi-info-circle me-1"></i>{{ os.motivocancel }}</span>
+          {% endif %}
+        </div>
+        <div class="text-muted small mt-1">
+          <span class="me-3"><i class="bi bi-person me-1"></i>{{ os.cliente.razao|default:os.cliente.nome }}</span>
+          <span class="me-3"><i class="bi bi-calendar3 me-1"></i>Previsão: {% if os.dataprevisao %}{{ os.dataprevisao|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+          {% if os.atend_periodo %}<span class="me-3"><i class="bi bi-clock me-1"></i>{{ os.get_atend_periodo_display }}{% if os.atend_hora %} {{ os.atend_hora }}{% endif %}</span>{% endif %}
+          <span class="me-3"><i class="bi bi-calendar-check me-1"></i>Emissão: {{ os.dataemissao|date:"d/m/Y"|default:"—" }}</span>
+        </div>
+      </div>
+      <div class="col-auto d-flex gap-2 flex-wrap">
+
+        {# Transições de status #}
+        {% if not bloqueada %}
+          {% if os.status == 'A' %}
+          <form method="post" action="{% url 'servicos:os_mudar_status' os.pk %}">
+            {% csrf_token %}<input type="hidden" name="status" value="P">
+            <button class="btn btn-sm btn-warning">→ Pendente</button>
+          </form>
+          <form method="post" action="{% url 'servicos:os_mudar_status' os.pk %}">
+            {% csrf_token %}<input type="hidden" name="status" value="R">
+            <button class="btn btn-sm btn-success">→ Realizada</button>
+          </form>
+          {% elif os.status == 'P' %}
+          <form method="post" action="{% url 'servicos:os_mudar_status' os.pk %}">
+            {% csrf_token %}<input type="hidden" name="status" value="R">
+            <button class="btn btn-sm btn-success">→ Realizada</button>
+          </form>
+          {% elif os.status == 'R' %}
+          <form method="post" action="{% url 'servicos:os_mudar_status' os.pk %}">
+            {% csrf_token %}<input type="hidden" name="status" value="F">
+            <button class="btn btn-sm btn-info">→ Faturada</button>
+          </form>
+          {% endif %}
+          <button class="btn btn-sm btn-outline-warning" @click="modalReagendar=true">
+            <i class="bi bi-calendar2-event me-1"></i> Reagendar
+          </button>
+          <button class="btn btn-sm btn-outline-danger" @click="modalCancel=true">
+            <i class="bi bi-x-circle me-1"></i> Cancelar
+          </button>
+        {% endif %}
+
+        <a href="{% url 'servicos:os_espelho' os.pk %}" target="_blank"
+           class="btn btn-sm btn-outline-dark" title="Espelho PDF">
+          <i class="bi bi-printer me-1"></i> Espelho
+        </a>
+        <a href="{% url 'servicos:crm_ficha' os.cliente_id %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-person-lines-fill me-1"></i> Ficha
+        </a>
+        <a href="{% url 'servicos:os_list' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+
+    {# ── Itens ──────────────────────────────────────────────── #}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2 fw-semibold small">
+        <i class="bi bi-list-ul me-1 text-success"></i>Itens
+      </div>
+      {% if grupos %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:70px" class="text-center">Tipo</th>
+              <th>Item</th>
+              <th style="width:90px">Identificação</th>
+              <th style="width:65px" class="text-end">Qtd</th>
+              <th style="width:90px" class="text-end">Preço</th>
+              <th style="width:90px" class="text-end">Instalação</th>
+              <th style="width:95px" class="text-end fw-semibold">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for grupo in grupos %}
+              {% if grupo.servico %}
+              <tr class="table-light">
+                <td class="text-center">
+                  <span class="badge bg-info-subtle text-info-emphasis">Serviço</span>
+                </td>
+                <td class="fw-semibold small">{{ grupo.servico.item.descricao|default:grupo.servico.identificacao|default:"—" }}</td>
+                <td class="small text-muted font-monospace">{{ grupo.servico.identificacao|default:"—" }}</td>
+                <td class="text-end small">{{ grupo.servico.quantidade|floatformat:3 }}</td>
+                <td class="text-end small font-monospace">{{ grupo.servico.valorunitario|floatformat:2 }}</td>
+                <td class="text-end small font-monospace">{{ grupo.servico.instalacao|floatformat:2 }}</td>
+                <td class="text-end small font-monospace fw-semibold">{{ grupo.servico.valortotal|floatformat:2 }}</td>
+              </tr>
+              {% for it in grupo.filhos %}
+              <tr>
+                <td class="text-center">
+                  {% if it.tipo_item == 'M' %}<span class="badge bg-warning-subtle text-warning-emphasis">Mat.-Prima</span>
+                  {% else %}<span class="badge bg-secondary-subtle text-secondary-emphasis">Produto</span>
+                  {% endif %}
+                </td>
+                <td class="small"><span class="text-muted me-1" style="font-size:.7rem;">└</span>{{ it.item.descricao|default:"—" }}</td>
+                <td class="small text-muted font-monospace">{{ it.identificacao|default:"—" }}</td>
+                <td class="text-end small">{{ it.quantidade|floatformat:3 }}</td>
+                <td class="text-end small font-monospace">{{ it.valorunitario|floatformat:2 }}</td>
+                <td class="text-end small font-monospace">{{ it.instalacao|floatformat:2 }}</td>
+                <td class="text-end small font-monospace fw-semibold">{{ it.valortotal|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+              {% else %}
+              {% for it in grupo.filhos %}
+              <tr>
+                <td class="text-center">
+                  {% if it.tipo_item == 'S' %}<span class="badge bg-info-subtle text-info-emphasis">Serviço</span>
+                  {% elif it.tipo_item == 'M' %}<span class="badge bg-warning-subtle text-warning-emphasis">Mat.-Prima</span>
+                  {% elif it.tipo_item == 'P' %}<span class="badge bg-secondary-subtle text-secondary-emphasis">Produto</span>
+                  {% else %}<span class="text-muted small">—</span>
+                  {% endif %}
+                </td>
+                <td class="small">{{ it.item.descricao|default:"—" }}</td>
+                <td class="small text-muted font-monospace">{{ it.identificacao|default:"—" }}</td>
+                <td class="text-end small">{{ it.quantidade|floatformat:3 }}</td>
+                <td class="text-end small font-monospace">{{ it.valorunitario|floatformat:2 }}</td>
+                <td class="text-end small font-monospace">{{ it.instalacao|floatformat:2 }}</td>
+                <td class="text-end small font-monospace fw-semibold">{{ it.valortotal|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="6" class="text-end small fw-semibold">Total:</td>
+              <td class="text-end font-monospace fw-bold">R$ {{ os.valortotal|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-muted text-center py-3 small">Sem itens.</div>
+      {% endif %}
+    </div>
+
+    {# ── Parcelas ───────────────────────────────────────────── #}
+    {% if parcelas %}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2 fw-semibold small">
+        <i class="bi bi-calendar-check me-1 text-info"></i>Parcelas
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:60px" class="text-center">Nº</th>
+              <th style="width:110px">Vencimento</th>
+              <th class="text-end">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in parcelas %}
+            <tr>
+              <td class="text-center small">{{ p.parcela }}</td>
+              <td class="small">{{ p.vencimento|date:"d/m/Y" }}</td>
+              <td class="text-end small font-monospace">R$ {{ p.valor|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ── Coluna direita — info ─────────────────────────────────── #}
+  <div class="col-lg-4">
+    <div class="card form-card mb-3">
+      <div class="card-header py-2 fw-semibold small">Informações</div>
+      <div class="card-body py-2">
+        <div class="mb-1"><span class="text-muted small">Vendedor</span><br>
+          <span class="small">{% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="mb-1"><span class="text-muted small">Técnico</span><br>
+          <span class="small">{% if tecnico %}{{ tecnico.razao|default:tecnico.nome }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="mb-1"><span class="text-muted small">Tabela de Preço</span><br>
+          <span class="small">{{ os.tabela|default:"—" }}</span>
+        </div>
+        <div class="mb-1"><span class="text-muted small">Condição Pgto</span><br>
+          <span class="small">{{ os.condicao|default:"—" }}</span>
+        </div>
+        <div class="mb-1"><span class="text-muted small">Método</span><br>
+          <span class="small">{{ os.metodo|default:"—" }}</span>
+        </div>
+        {% if os.atend_obs %}
+        <hr class="my-2">
+        <div class="text-muted small">{{ os.atend_obs|linebreaksbr }}</div>
+        {% endif %}
+        {% if os.idpedido %}
+        <hr class="my-2">
+        <div class="mb-1">
+          <span class="text-muted small">Pedido Gerado</span><br>
+          <a href="{% url 'vendas:pedido_detalhe' os.idpedido %}"
+             class="small fw-semibold text-info text-decoration-none">
+            <i class="bi bi-receipt me-1"></i>#{{ os.idpedido }}
+          </a>
+        </div>
+        {% endif %}
+        <hr class="my-2">
+        <div class="text-muted" style="font-size:.72rem;">
+          Lançado por {{ os.usuariolanc }} em {{ os.dataemissao|date:"d/m/Y" }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Modal Cancelamento ──────────────────────────────────────── #}
+<div x-show="modalCancel" x-transition
+     class="modal-overlay" @click.self="modalCancel=false" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header-bar">
+      <span><i class="bi bi-x-circle me-2"></i>Cancelar {{ os.numero }}</span>
+      <button type="button" class="btn-close btn-close-white" @click="modalCancel=false"></button>
+    </div>
+    <div class="modal-body-inner">
+      <form method="post" action="{% url 'servicos:os_cancelar' os.pk %}">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Motivo do cancelamento <span class="text-danger">*</span></label>
+          <textarea name="motivo" class="form-control form-control-sm" rows="3"
+                    placeholder="Descreva o motivo..." required></textarea>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+          <button type="button" class="btn btn-sm btn-secondary" @click="modalCancel=false">Voltar</button>
+          <button type="submit" class="btn btn-sm btn-danger">
+            <i class="bi bi-x-circle me-1"></i> Confirmar Cancelamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Modal Reagendamento ─────────────────────────────────────── #}
+<div x-show="modalReagendar" x-transition
+     class="modal-overlay" @click.self="modalReagendar=false" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header-bar" style="background:#fd7e14;">
+      <span><i class="bi bi-calendar2-event me-2"></i>Reagendar {{ os.numero }}</span>
+      <button type="button" class="btn-close btn-close-white" @click="modalReagendar=false"></button>
+    </div>
+    <div class="modal-body-inner">
+      <form method="post" action="{% url 'servicos:os_reagendar' os.pk %}">
+        {% csrf_token %}
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Nova data de previsão <span class="text-danger">*</span></label>
+            <input type="date" name="dataprevisao"
+                   value="{{ os.dataprevisao|date:'Y-m-d'|default:'' }}"
+                   class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Período</label>
+            <select name="atend_periodo" class="form-select form-select-sm">
+              <option value="">— Período —</option>
+              {% for val, label in os.PERIODO_CHOICES %}
+              <option value="{{ val }}" {% if os.atend_periodo == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Hora (opcional)</label>
+            <input type="time" name="atend_hora"
+                   value="{{ os.atend_hora|default:'' }}"
+                   class="form-control form-control-sm">
+          </div>
+          {% if os.status == 'P' %}
+          <div class="col-12">
+            <div class="form-check mt-1">
+              <input class="form-check-input" type="checkbox" name="retornar_agendada" value="1" id="chkReagendar">
+              <label class="form-check-label small" for="chkReagendar">
+                Retornar status para <strong>Agendada</strong>
+              </label>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+          <button type="button" class="btn btn-sm btn-secondary" @click="modalReagendar=false">Voltar</button>
+          <button type="submit" class="btn btn-sm btn-warning">
+            <i class="bi bi-calendar2-check me-1"></i> Confirmar Reagendamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+</div>{# /x-data #}
+{% endblock %}

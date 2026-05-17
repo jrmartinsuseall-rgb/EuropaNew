@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Editar NF {{ nf.numeronf }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:nf_list' %}">NFs de Entrada</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:nf_detalhe' nf.pk %}">NF {{ nf.numeronf }}</a></li>
+<li class="breadcrumb-item active">Editar</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.item-lookup-result { position:absolute; z-index:200; background:#fff; border:1px solid #dee2e6;
+  border-radius:.375rem; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.item-lookup-result .lookup-item { padding:.4rem .75rem; cursor:pointer; font-size:.82rem; }
+.item-lookup-result .lookup-item:hover { background:#f0f4ff; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CONDICOES_JSON  = {{ condicoes_json|safe }};
+  const ITENS_INIT      = {{ itens_init|safe }};
+  const PARCELAS_INIT   = {{ parcelas_init|safe }};
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-receipt me-2 text-success"></i>Editar NF
+    <span class="font-monospace">{{ nf.numeronf }}</span>
+    <span class="badge bg-warning-subtle text-warning-emphasis ms-2" style="font-size:.75rem;">Em Digitação</span>
+  </h5>
+</div>
+
+<form method="post" action="{% url 'estoque:nf_editar' nf.pk %}" id="form-nf"
+  x-data="{
+    condicao_pk: '{{ nf.condicao_id|default:'' }}',
+    condicao_parcelas: {{ nf.condicao.parcelas|default:1 }},
+    condicao_dias: {{ nf.condicao.dias|default:0 }},
+    dataentrada: '{{ nf.dataentrada|date:'Y-m-d'|default:'' }}',
+    itens: ITENS_INIT,
+    parcelas: PARCELAS_INIT,
+
+    buscaItem: '',
+    resultadosItem: [],
+    novoItemId: null,
+    novoItemDesc: '',
+    novoItemIdent: '',
+    novoItemQty: 1,
+    novoItemVunit: 0,
+
+    get totalItens() {
+      return this.itens.reduce((s, i) => s + parseFloat(i.valortotal || 0), 0);
+    },
+    get totalFormatado() {
+      return this.totalItens.toFixed(2).replace('.', ',');
+    },
+
+    async buscarItem(q) {
+      if (q.length < 2) { this.resultadosItem = []; return; }
+      const r = await fetch('/cadastros/lookup/item/?q=' + encodeURIComponent(q) + '&formato=json');
+      this.resultadosItem = await r.json();
+    },
+    selecionarItem(id, desc, ident) {
+      this.novoItemId    = id;
+      this.novoItemDesc  = desc;
+      this.novoItemIdent = ident || '';
+      this.buscaItem     = desc;
+      this.resultadosItem = [];
+    },
+    adicionarItem() {
+      if (!this.novoItemId) return;
+      const qty   = parseFloat(this.novoItemQty)  || 1;
+      const vunit = parseFloat(this.novoItemVunit) || 0;
+      const vtot  = parseFloat((qty * vunit).toFixed(2));
+      this.itens.push({
+        item_id: this.novoItemId, descricao: this.novoItemDesc,
+        identificacao: this.novoItemIdent,
+        quantidade: qty, valorunitario: vunit, valortotal: vtot,
+      });
+      this.novoItemId=null; this.novoItemDesc=''; this.novoItemIdent='';
+      this.buscaItem=''; this.novoItemQty=1; this.novoItemVunit=0;
+      this.calcularParcelas();
+    },
+    removerItem(i) { this.itens.splice(i, 1); this.calcularParcelas(); },
+
+    onCondicaoChange(e) {
+      const pk   = e.target.value;
+      const cond = CONDICOES_JSON[pk] || {parcelas: 1, dias: 0};
+      this.condicao_pk       = pk;
+      this.condicao_parcelas = cond.parcelas;
+      this.condicao_dias     = cond.dias;
+      this.calcularParcelas();
+    },
+    calcularParcelas() {
+      if (!this.dataentrada || this.condicao_parcelas < 1 || this.totalItens <= 0) {
+        this.parcelas = []; return;
+      }
+      const n    = parseInt(this.condicao_parcelas);
+      const dias = parseInt(this.condicao_dias);
+      const tot  = this.totalItens;
+      const base = parseFloat((tot / n).toFixed(2));
+      const [y, m, d] = this.dataentrada.split('-').map(Number);
+      this.parcelas = Array.from({length: n}, (_, i) => {
+        const dt   = new Date(y, m - 1, d + dias * (i + 1));
+        const venc = dt.toISOString().split('T')[0];
+        const val  = i < n - 1 ? base : parseFloat((tot - base * (n - 1)).toFixed(2));
+        return { parcela: i + 1, vencimento: venc, valor: val };
+      });
+    },
+    fmtDate(s) {
+      if (!s) return '—';
+      const [y, m, d] = s.split('-');
+      return d + '/' + m + '/' + y;
+    },
+  }"
+  @submit.prevent="
+    document.getElementById('itens_json').value    = JSON.stringify(itens);
+    document.getElementById('parcelas_json').value = JSON.stringify(parcelas);
+    $el.submit();
+  ">
+  {% csrf_token %}
+  <input type="hidden" id="itens_json"    name="itens_json">
+  <input type="hidden" id="parcelas_json" name="parcelas_json">
+
+  {# ── Identificação da NF ──────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Identificação da NF</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label small">Fornecedor <span class="text-danger">*</span></label>
+          {{ form.fornecedor }}
+          {% if form.fornecedor.errors %}<div class="text-danger small mt-1">{{ form.fornecedor.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Número NF <span class="text-danger">*</span></label>
+          {{ form.numeronf }}
+          {% if form.numeronf.errors %}<div class="text-danger small mt-1">{{ form.numeronf.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small">Série</label>
+          {{ form.serie }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Data Emissão</label>
+          {{ form.dataemissao }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Data Entrada</label>
+          <input type="date" name="dataentrada"
+                 class="form-control form-control-sm"
+                 x-model="dataentrada"
+                 @change="calcularParcelas()"
+                 value="{{ nf.dataentrada|date:'Y-m-d'|default:'' }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label small">
+            Chave de Acesso NF-e
+            <span class="text-muted fw-normal">(opcional)</span>
+          </label>
+          {{ form.chaveacesso }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Condição de Pagamento ────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Condição de Pagamento</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small">Condição</label>
+          {{ form.condicao }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Método</label>
+          {{ form.metodo }}
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small">Observação</label>
+          {{ form.observacao }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Itens ───────────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">
+      <i class="bi bi-list-ul me-1 text-success"></i>Itens
+      <span class="badge bg-secondary ms-1" x-text="itens.length"></span>
+    </div>
+    <div class="card-body pb-2">
+
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-5 position-relative">
+          <label class="form-label small">Buscar Item</label>
+          <input type="text" class="form-control form-control-sm"
+                 placeholder="Digite para buscar..."
+                 x-model="buscaItem"
+                 @input.debounce.300ms="buscarItem($event.target.value)"
+                 autocomplete="off">
+          <div class="item-lookup-result" x-show="resultadosItem.length > 0" @click.outside="resultadosItem=[]">
+            <template x-for="it in resultadosItem" :key="it.id">
+              <div class="lookup-item" @click="selecionarItem(it.id, it.descricao, it.identificacao)">
+                <span x-text="it.descricao"></span>
+                <span class="text-muted ms-1 small" x-text="it.identificacao ? '('+it.identificacao+')' : ''"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Quantidade</label>
+          <input type="number" class="form-control form-control-sm" step="0.001" min="0.001"
+                 x-model="novoItemQty">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Valor Unit. (R$)</label>
+          <input type="text" inputmode="decimal" class="form-control form-control-sm"
+                 :value="novoItemVunit > 0 ? formatBRL(novoItemVunit) : ''"
+                 @change="novoItemVunit = parseBRL($event.target.value)"
+                 placeholder="0,00">
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-sm btn-success w-100 mt-3"
+                  @click="adicionarItem()" :disabled="!novoItemId">
+            <i class="bi bi-plus-lg"></i> Adicionar
+          </button>
+        </div>
+      </div>
+
+      <template x-if="itens.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-1" style="font-size:.8rem;">
+            <thead class="table-light">
+              <tr>
+                <th>Descrição</th>
+                <th style="width:120px">Identificação</th>
+                <th style="width:90px" class="text-end">Qtd</th>
+                <th style="width:120px" class="text-end">Valor Unit.</th>
+                <th style="width:110px" class="text-end">Total</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(it, idx) in itens" :key="idx">
+                <tr>
+                  <td x-text="it.descricao"></td>
+                  <td class="text-muted small" x-text="it.identificacao||'—'"></td>
+                  <td class="text-end" x-text="parseFloat(it.quantidade).toFixed(3)"></td>
+                  <td class="text-end font-monospace" x-text="'R$ '+parseFloat(it.valorunitario).toFixed(4)"></td>
+                  <td class="text-end font-monospace fw-semibold" x-text="'R$ '+parseFloat(it.valortotal).toFixed(2)"></td>
+                  <td>
+                    <button type="button" class="btn btn-xs btn-outline-danger p-0 px-1"
+                            @click="removerItem(idx)">
+                      <i class="bi bi-x" style="font-size:.8rem;"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="4" class="text-end fw-semibold small">Total dos Itens:</td>
+                <td class="text-end font-monospace fw-bold" x-text="'R$ '+totalFormatado"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </template>
+      <template x-if="itens.length === 0">
+        <div class="text-center text-muted small py-2">Nenhum item adicionado.</div>
+      </template>
+
+    </div>
+  </div>
+
+  {# ── Parcelas ─────────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">
+      <i class="bi bi-calendar3 me-1 text-primary"></i>Parcelas
+      <span class="badge bg-secondary ms-1" x-text="parcelas.length"></span>
+    </div>
+    <div class="card-body pb-2">
+      <template x-if="parcelas.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-1" style="font-size:.8rem;">
+            <thead class="table-light">
+              <tr>
+                <th style="width:70px" class="text-center">Parcela</th>
+                <th style="width:130px">Vencimento</th>
+                <th style="width:130px" class="text-end">Valor (R$)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in parcelas" :key="p.parcela">
+                <tr>
+                  <td class="text-center font-monospace" x-text="p.parcela"></td>
+                  <td class="font-monospace small" x-text="fmtDate(p.vencimento)"></td>
+                  <td class="text-end font-monospace" x-text="'R$ '+parseFloat(p.valor).toFixed(2)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <template x-if="parcelas.length === 0">
+        <div class="text-center text-muted small py-2">
+          Selecione a condição de pagamento e informe a data de entrada para gerar as parcelas automaticamente.
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary" :disabled="itens.length === 0">
+      <i class="bi bi-floppy me-1"></i> Salvar
+    </button>
+    <a href="{% url 'estoque:nf_detalhe' nf.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}

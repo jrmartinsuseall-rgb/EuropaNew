@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h5 class="mb-0 fw-semibold">
+    <i class="bi bi-arrow-up-circle me-2"></i>{{ titulo }}
+  </h5>
+  <a href="{% url 'financeiro:contapag_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+{% if bloqueado %}
+<div class="alert alert-info d-flex align-items-center py-2 mb-3" role="alert">
+  <i class="bi bi-lock-fill me-2"></i>
+  Título baixado — somente leitura.
+</div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="row g-3">
+
+        {# linha 1 — Documento / Emissão / Vencimento / Parcela #}
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Nº Documento</label>
+          {{ form.numerodoc }}
+          {% if form.numerodoc.errors %}
+            <div class="invalid-feedback d-block">{{ form.numerodoc.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Data de Emissão</label>
+          {{ form.data }}
+          {% if form.data.errors %}
+            <div class="invalid-feedback d-block">{{ form.data.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Vencimento</label>
+          {{ form.vencimento }}
+          {% if form.vencimento.errors %}
+            <div class="invalid-feedback d-block">{{ form.vencimento.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Parcela</label>
+          {{ form.parcela }}
+          {% if form.parcela.errors %}
+            <div class="invalid-feedback d-block">{{ form.parcela.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# linha 2 — Fornecedor / Valor #}
+        <div class="col-md-8">
+          <label class="form-label small fw-semibold">Fornecedor</label>
+          {{ form.fornecedor }}
+          {% if form.fornecedor.errors %}
+            <div class="invalid-feedback d-block">{{ form.fornecedor.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Valor (R$)</label>
+          {{ form.valor }}
+          {% if form.valor.errors %}
+            <div class="invalid-feedback d-block">{{ form.valor.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {# linha 3 — Portador / Banco / Situação #}
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Portador</label>
+          {{ form.portador }}
+          {% if form.portador.errors %}
+            <div class="invalid-feedback d-block">{{ form.portador.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Banco / Conta</label>
+          {{ form.banco }}
+          {% if form.banco.errors %}
+            <div class="invalid-feedback d-block">{{ form.banco.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Situação</label>
+          {{ form.status }}
+          {% if form.status.errors %}
+            <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+      </div>{# /row #}
+
+      {% if not bloqueado %}
+      <hr class="my-4">
+      <div class="d-flex gap-2 justify-content-end">
+        {% if not objeto %}
+        <button type="submit" name="salvar_novo" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-plus-circle me-1"></i>Salvar e Novo
+        </button>
+        {% endif %}
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Salvar
+        </button>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+</div>
+{% endblock %}

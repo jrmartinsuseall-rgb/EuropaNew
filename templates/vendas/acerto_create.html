@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Novo Acerto de Comissão{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'vendas:acerto_list' %}">Comissões</a></li>
+<li class="breadcrumb-item active">Novo Acerto</li>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 small" role="alert">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-cash-coin me-2 text-success"></i>Novo Acerto de Comissão
+  </h5>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card form-card">
+    <div class="card-body">
+      <div class="row g-3">
+
+        <div class="col-md-5">
+          <label class="form-label form-label-sm">Vendedor <span class="text-danger">*</span></label>
+          <select name="idvendrepre" class="form-select form-select-sm" required>
+            <option value="">— selecione —</option>
+            {% for v in vendedores %}
+            <option value="{{ v.pk }}">{{ v.razao|default:v.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Período Inicial <span class="text-danger">*</span></label>
+          <input type="date" name="perildoini" class="form-control form-control-sm" required>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Período Final <span class="text-danger">*</span></label>
+          <input type="date" name="periodofim" class="form-control form-control-sm" required>
+        </div>
+
+        <div class="col-md-9">
+          <label class="form-label form-label-sm">Observação</label>
+          <input type="text" name="observacao" maxlength="200"
+                 class="form-control form-control-sm" placeholder="Opcional">
+        </div>
+
+      </div>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-check-lg me-1"></i>Criar Acerto
+      </button>
+      <a href="{% url 'vendas:acerto_list' %}" class="btn btn-secondary btn-sm ms-auto">
+        <i class="bi bi-x-lg me-1"></i>Cancelar
+      </a>
+    </div>
+  </div>
+</form>
+
+{% endblock %}

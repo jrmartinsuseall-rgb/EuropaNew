@@ -1,0 +1,228 @@
+{% extends "relatorios/base_pdf.html" %}
+{% block title %}OS {{ os.numero }}{% endblock %}
+{% block titulo %}ORDEM DE SERVIÇO{% endblock %}
+{% block subtitulo %}Nº {{ os.numero }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-item label {
+    display: block;
+    font-size: 7pt;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .3pt;
+  }
+  .info-item span {
+    font-size: 8.5pt;
+    font-weight: bold;
+  }
+  .info-item.wide { grid-column: span 2; }
+  .secao-titulo { margin-bottom: 0; }
+  .obs-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 5pt 7pt;
+    font-size: 8pt;
+    margin-bottom: 8pt;
+  }
+  .total-row td { font-size: 9.5pt; }
+  .row-servico { background: #f0f4ff; }
+  .row-servico td { font-weight: bold; }
+  .row-filho td:nth-child(2) { padding-left: 14pt; }
+  .assinatura {
+    margin-top: 24pt;
+    display: flex;
+    gap: 40pt;
+  }
+  .assinatura-linha {
+    flex: 1;
+    border-top: 1px solid #212529;
+    padding-top: 3pt;
+    font-size: 7.5pt;
+    text-align: center;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Dados do Registro ───────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Dados da OS</div>
+  <div style="border:1px solid #dee2e6; border-top:none; padding:8pt;">
+    <div class="info-grid-4">
+      <div class="info-item wide">
+        <label>Cliente</label>
+        <span>{{ os.cliente.razao|default:os.cliente.nome }}</span>
+      </div>
+      <div class="info-item">
+        <label>Status</label>
+        <span>{{ os.get_status_display }}</span>
+      </div>
+      <div class="info-item">
+        <label>Emissão</label>
+        <span>{{ os.dataemissao|date:"d/m/Y"|default:"—" }}</span>
+      </div>
+    </div>
+    <div class="info-grid-4">
+      <div class="info-item">
+        <label>Previsão</label>
+        <span>{% if os.dataprevisao %}{{ os.dataprevisao|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Período Atend.</label>
+        <span>{{ os.get_atend_periodo_display|default:"—" }}{% if os.atend_hora %} — {{ os.atend_hora }}{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Vendedor</label>
+        <span>{% if vendedor %}{{ vendedor.razao|default:vendedor.nome }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Técnico</label>
+        <span>{% if tecnico %}{{ tecnico.razao|default:tecnico.nome }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    <div class="info-grid-3">
+      <div class="info-item">
+        <label>Tabela de Preço</label>
+        <span>{% if os.tabela %}{{ os.tabela.descricao }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Cond. Pagamento</label>
+        <span>{% if os.condicao %}{{ os.condicao.descricao }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="info-item">
+        <label>Método</label>
+        <span>{% if os.metodo %}{{ os.metodo.descricao }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    {% if os.atend_obs %}
+    <div class="obs-box"><strong>Observação:</strong> {{ os.atend_obs }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Endereço do Cliente ──────────────────────────────────────────── #}
+{% with c=os.cliente %}
+{% if c.endereco or c.cidade %}
+<div class="secao">
+  <div class="secao-titulo">Endereço para Atendimento</div>
+  <div style="border:1px solid #dee2e6; border-top:none; padding:6pt 8pt; font-size:8.5pt;">
+    {% if c.endereco %}{{ c.endereco }}{% if c.numero %}, {{ c.numero }}{% endif %}{% endif %}
+    {% if c.bairro %} — {{ c.bairro }}{% endif %}
+    {% if c.cidade %} — {{ c.cidade.descricao }}/{{ c.cidade.uf }}{% endif %}
+    {% if c.cep %} — CEP: {{ c.cep }}{% endif %}
+    {% if c.fone %}&nbsp;&nbsp;<strong>Fone:</strong> {{ c.fone }}{% endif %}
+    {% if c.celular %}&nbsp;&nbsp;<strong>Cel:</strong> {{ c.celular }}{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+{# ── Itens de Serviço ─────────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Itens / Serviços</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90pt">Identificação</th>
+        <th>Descrição</th>
+        <th class="text-center" style="width:45pt">Qtd</th>
+        <th class="text-end" style="width:65pt">Val. Unit.</th>
+        <th class="text-end" style="width:65pt">Instalação</th>
+        <th class="text-end" style="width:70pt">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if grupos %}
+        {% for grupo in grupos %}
+          {% if grupo.servico %}
+          <tr class="row-servico">
+            <td class="font-mono">{{ grupo.servico.identificacao|default:"—" }}</td>
+            <td>{{ grupo.servico.item.descricao|default:grupo.servico.identificacao|default:"—" }}</td>
+            <td class="text-center">{{ grupo.servico.quantidade|floatformat:3 }}</td>
+            <td class="text-end font-mono">{{ grupo.servico.valorunitario|floatformat:2 }}</td>
+            <td class="text-end font-mono">{{ grupo.servico.instalacao|floatformat:2 }}</td>
+            <td class="text-end font-mono fw-bold">{{ grupo.servico.valortotal|floatformat:2 }}</td>
+          </tr>
+          {% for it in grupo.filhos %}
+          <tr class="row-filho">
+            <td class="font-mono">{{ it.identificacao|default:"—" }}</td>
+            <td>└ {{ it.item.descricao|default:"—" }}</td>
+            <td class="text-center">{{ it.quantidade|floatformat:3 }}</td>
+            <td class="text-end font-mono">{{ it.valorunitario|floatformat:2 }}</td>
+            <td class="text-end font-mono">{{ it.instalacao|floatformat:2 }}</td>
+            <td class="text-end font-mono fw-bold">{{ it.valortotal|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          {% for it in grupo.filhos %}
+          <tr>
+            <td class="font-mono">{{ it.identificacao|default:"—" }}</td>
+            <td>{{ it.item.descricao|default:"—" }}</td>
+            <td class="text-center">{{ it.quantidade|floatformat:3 }}</td>
+            <td class="text-end font-mono">{{ it.valorunitario|floatformat:2 }}</td>
+            <td class="text-end font-mono">{{ it.instalacao|floatformat:2 }}</td>
+            <td class="text-end font-mono fw-bold">{{ it.valortotal|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        {% endfor %}
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted">Nenhum item.</td></tr>
+      {% endif %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="5" class="text-end fw-bold">TOTAL DA OS</td>
+        <td class="text-end font-mono fw-bold">R$ {{ os.valortotal|floatformat:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{# ── Parcelas ─────────────────────────────────────────────────────── #}
+{% if parcelas %}
+<div class="secao">
+  <div class="secao-titulo">Condições de Pagamento</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50pt">Parcela</th>
+        <th style="width:100pt">Vencimento</th>
+        <th class="text-end">Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in parcelas %}
+      <tr>
+        <td class="text-center font-mono">{{ p.parcela }}</td>
+        <td>{{ p.vencimento|date:"d/m/Y" }}</td>
+        <td class="text-end font-mono">R$ {{ p.valor|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Assinaturas ──────────────────────────────────────────────────── #}
+<div class="assinatura">
+  <div class="assinatura-linha">Técnico Responsável</div>
+  <div class="assinatura-linha">Cliente / Responsável</div>
+</div>
+
+{% endblock %}

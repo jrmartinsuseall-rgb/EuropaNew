@@ -1,0 +1,31 @@
+<tr id="tecnico-{{ p.pk }}" class="{% if p.inativo %}text-muted{% endif %}">
+  <td class="small font-monospace">{{ p.idcliforemp }}</td>
+  <td class="small">{{ p.razao|default:p.nome }}</td>
+  <td class="small font-monospace">{{ p.cnpjcpf|default:"—" }}</td>
+  <td class="small">{{ p.fone|default:"—" }}</td>
+  <td class="small">{{ p.celular|default:"—" }}</td>
+  <td class="small text-center">{{ p.equipe|default:"—" }}</td>
+  <td class="text-center">
+    {% if p.inativo %}
+    <span class="badge bg-secondary">Inativo</span>
+    {% else %}
+    <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1 justify-content-end">
+      <a href="{% url 'cadastros:tecnico_edit' p.pk %}" class="btn btn-xs btn-outline-primary p-0 px-1">
+        <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+      </a>
+      <form method="post" action="{% url 'cadastros:tecnico_inativar' p.pk %}"
+            hx-post="{% url 'cadastros:tecnico_inativar' p.pk %}"
+            hx-target="#tecnico-{{ p.pk }}" hx-swap="outerHTML">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-xs btn-outline-secondary p-0 px-1"
+                title="{% if p.inativo %}Reativar{% else %}Inativar{% endif %}">
+          <i class="bi bi-{% if p.inativo %}person-check{% else %}person-slash{% endif %}" style="font-size:.75rem;"></i>
+        </button>
+      </form>
+    </div>
+  </td>
+</tr>

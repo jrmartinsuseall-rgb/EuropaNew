@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Novo Roteiro de Instalação{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'servicos:roteiro_list' %}">Roteiros</a></li>
+<li class="breadcrumb-item active">Novo</li>
+{% endblock %}
+
+{% block content %}
+<div x-data="roteiroCreate('{% url 'servicos:roteiro_os_pendentes' %}')"
+     x-init="init()"
+     class="container-fluid px-0">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+      <i class="bi bi-map me-2 text-info"></i>Novo Roteiro de Instalação
+    </h5>
+  </div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 small" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="os_json" :value="osJson()">
+
+    {# Cabeçalho #}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2 small fw-semibold text-muted">Dados do Roteiro</div>
+      <div class="card-body py-2">
+        <div class="row g-2">
+          <div class="col-md-2">
+            <label class="form-label form-label-sm mb-0">Data de Execução</label>
+            <input type="date" name="data_execucao" value="{{ data_hoje }}"
+                   class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm mb-0">Destino / Região</label>
+            <input type="text" name="destino" class="form-control form-control-sm"
+                   placeholder="Ex: Zona Norte, Campinas..." maxlength="200">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm mb-0">Observação</label>
+            <input type="text" name="observacao" class="form-control form-control-sm"
+                   placeholder="Observação interna..." maxlength="500">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Filtro de OS #}
+    <div class="card form-card mb-3">
+      <div class="card-header py-2 small fw-semibold text-muted">Buscar OS Pendentes</div>
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label form-label-sm mb-0">Previsão de</label>
+            <input type="date" x-model="filtro.data_ini" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm mb-0">até</label>
+            <input type="date" x-model="filtro.data_fim" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm mb-0">Nº OS / Cliente</label>
+            <input type="text" x-model="filtro.q" @keydown.enter.prevent="buscar()"
+                   class="form-control form-control-sm" placeholder="Nº OS ou nome do cliente...">
+          </div>
+          <div class="col-md-2">
+            <button type="button" @click="buscar()"
+                    class="btn btn-secondary btn-sm w-100" :disabled="carregando">
+              <span x-show="carregando" class="spinner-border spinner-border-sm me-1"></span>
+              <i x-show="!carregando" class="bi bi-search me-1"></i>
+              <span x-text="carregando ? 'Buscando...' : 'Buscar OS'"></span>
+            </button>
+          </div>
+          <div class="col-md-2" x-show="selecionados.length">
+            <span class="badge bg-info text-dark w-100 py-2 small">
+              <i class="bi bi-check2-square me-1"></i>
+              <span x-text="selecionados.length"></span> selecionada(s)
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Tabela de OS #}
+    <div class="card form-card mb-3" x-show="resultados !== null">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+          <thead class="table-light">
+            <tr>
+              <th style="width:36px" class="text-center">
+                <input type="checkbox" class="form-check-input"
+                       @change="toggleAll($event.target.checked)"
+                       :checked="resultados && resultados.length && selecionados.length === resultados.length">
+              </th>
+              <th style="width:75px">Nº OS</th>
+              <th>Cliente</th>
+              <th style="width:70px">Fone</th>
+              <th style="width:95px">Previsão</th>
+              <th style="width:80px">Período</th>
+              <th style="width:80px" class="text-end">Valor</th>
+              <th style="width:190px">Técnico</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-if="resultados && resultados.length === 0">
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4 small">Nenhuma OS pendente encontrada.</td>
+              </tr>
+            </template>
+            <template x-for="os in resultados" :key="os.id">
+              <tr :class="{ 'table-info': isSelecionado(os.id) }">
+                <td class="text-center align-middle">
+                  <input type="checkbox" class="form-check-input"
+                         :checked="isSelecionado(os.id)"
+                         @change="toggle(os)">
+                </td>
+                <td class="font-monospace small text-muted align-middle" x-text="os.numero"></td>
+                <td class="small align-middle" x-text="os.cliente"></td>
+                <td class="small font-monospace align-middle" x-text="os.fone || '—'"></td>
+                <td class="small font-monospace align-middle" x-text="os.dataprevisao_fmt"></td>
+                <td class="small align-middle" x-text="os.periodo"></td>
+                <td class="small text-end font-monospace align-middle"
+                    x-text="parseFloat(os.valortotal).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})"></td>
+                <td class="align-middle">
+                  <select class="form-select form-select-sm"
+                          :disabled="!isSelecionado(os.id)"
+                          @change="setTecnico(os.id, $event.target.value)">
+                    <option value="">— Técnico —</option>
+                    {% for tec in tecnicos %}
+                    <option value="{{ tec.pk }}">{{ tec.nome|default:tec.razao }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+            </template>
+            <template x-if="resultados === null">
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4 small">
+                  <i class="bi bi-search me-1"></i>Use os filtros acima para buscar OS disponíveis.
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Botões #}
+    <div class="d-flex gap-2 justify-content-end">
+      <a href="{% url 'servicos:roteiro_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-x-lg me-1"></i>Cancelar
+      </a>
+      <button type="submit" class="btn btn-info btn-sm text-white"
+              :disabled="selecionados.length === 0">
+        <i class="bi bi-check2 me-1"></i>
+        Criar Roteiro
+        <span x-show="selecionados.length" class="badge bg-white text-info ms-1"
+              x-text="selecionados.length"></span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function roteiroCreate(urlPendentes) {
+  return {
+    urlPendentes,
+    carregando: false,
+    resultados: null,
+    filtro: { data_ini: '', data_fim: '', q: '' },
+    // map: os_id -> { os_id, tecnico_id }
+    selecao: {},
+
+    init() {},
+
+    get selecionados() {
+      return Object.values(this.selecao);
+    },
+
+    isSelecionado(id) {
+      return id in this.selecao;
+    },
+
+    toggle(os) {
+      if (this.isSelecionado(os.id)) {
+        delete this.selecao[os.id];
+      } else {
+        this.selecao[os.id] = { os_id: os.id, tecnico_id: null };
+      }
+      // trigger reactivity
+      this.selecao = { ...this.selecao };
+    },
+
+    toggleAll(checked) {
+      if (!this.resultados) return;
+      if (checked) {
+        const novo = {};
+        this.resultados.forEach(os => {
+          novo[os.id] = this.selecao[os.id] || { os_id: os.id, tecnico_id: null };
+        });
+        this.selecao = novo;
+      } else {
+        this.selecao = {};
+      }
+    },
+
+    setTecnico(osId, tecnicoId) {
+      if (this.isSelecionado(osId)) {
+        this.selecao[osId].tecnico_id = tecnicoId || null;
+        this.selecao = { ...this.selecao };
+      }
+    },
+
+    osJson() {
+      return JSON.stringify(this.selecionados);
+    },
+
+    async buscar() {
+      this.carregando = true;
+      const p = new URLSearchParams();
+      if (this.filtro.data_ini) p.set('data_ini', this.filtro.data_ini);
+      if (this.filtro.data_fim) p.set('data_fim', this.filtro.data_fim);
+      if (this.filtro.q)        p.set('q',        this.filtro.q);
+
+      try {
+        const resp = await fetch(`${this.urlPendentes}?${p.toString()}`);
+        this.resultados = await resp.json();
+        // remove from selecao any OS no longer in results
+        const ids = new Set(this.resultados.map(o => o.id));
+        const limpo = {};
+        Object.keys(this.selecao).forEach(k => {
+          if (ids.has(parseInt(k))) limpo[k] = this.selecao[k];
+        });
+        this.selecao = limpo;
+      } catch (e) {
+        this.resultados = [];
+        console.error('Erro ao buscar OS:', e);
+      } finally {
+        this.carregando = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

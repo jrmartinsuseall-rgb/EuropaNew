@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Requisição #{{ req.idrequisicao }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:req_list' %}">Requisições</a></li>
+<li class="breadcrumb-item active">#{{ req.idrequisicao }}</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ──────────────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h5 class="mb-0">
+      <i class="bi bi-arrow-down-up me-2 text-warning"></i>
+      Requisição <span class="font-monospace">#{{ req.idrequisicao }}</span>
+      <span class="badge ms-2
+        {% if req.status == 'A' %}bg-primary-subtle text-primary-emphasis
+        {% elif req.status == 'P' %}bg-warning-subtle text-warning-emphasis
+        {% elif req.status == 'F' %}bg-success-subtle text-success-emphasis
+        {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+        {{ req.get_status_display }}
+      </span>
+    </h5>
+    <small class="text-muted">
+      {{ req.data|date:"d/m/Y" }} &bull; {{ req.origem|default:"—" }}
+      {% if req.cliforemp %}&bull; {{ req.cliforemp.razao|default:req.cliforemp.nome }}{% endif %}
+      {% if req.dataatendi %}&bull; Atendida em {{ req.dataatendi|date:"d/m/Y" }}{% endif %}
+    </small>
+  </div>
+  {% if not bloqueada %}
+  <form method="post" action="{% url 'estoque:req_cancelar' req.pk %}"
+        onsubmit="return confirm('Cancelar esta requisição?')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-x-circle me-1"></i>Cancelar
+    </button>
+  </form>
+  {% endif %}
+  <a href="{% url 'estoque:req_espelho' req.pk %}" target="_blank"
+     class="btn btn-sm btn-outline-dark" title="Espelho PDF">
+    <i class="bi bi-printer me-1"></i>Espelho
+  </a>
+</div>
+
+{% if req.observacao %}
+<div class="alert alert-secondary py-2 small mb-3">
+  <i class="bi bi-chat-left-text me-1"></i> {{ req.observacao }}
+</div>
+{% endif %}
+
+{# ── Legenda ──────────────────────────────────────────────────────────────────── #}
+{% if not bloqueada %}
+<div class="d-flex gap-3 mb-2" style="font-size:.77rem;">
+  <span><i class="bi bi-circle-fill text-success me-1"></i>Atendimento total possível</span>
+  <span><i class="bi bi-circle-fill text-warning me-1"></i>Atendimento parcial</span>
+  <span><i class="bi bi-circle-fill text-danger me-1"></i>Sem estoque disponível</span>
+  <span><i class="bi bi-circle-fill text-secondary me-1"></i>Item finalizado</span>
+</div>
+{% endif %}
+
+{# ── Itens e Atendimento ─────────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-list-ul me-1 text-success"></i>Itens
+  </div>
+  <div class="table-responsive">
+    <form method="post" action="{% url 'estoque:req_atender' req.pk %}">
+      {% csrf_token %}
+      <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+        <thead class="table-light">
+          <tr>
+            <th style="width:30px"></th>
+            <th>Identificação</th>
+            <th style="width:105px" class="text-end">Solicitado</th>
+            <th style="width:105px" class="text-end">Atendido</th>
+            <th style="width:105px" class="text-end">Saldo Req.</th>
+            <th style="width:115px" class="text-end">
+              Saldo Estoque
+              <i class="bi bi-info-circle text-muted" style="font-size:.75rem;"
+                 title="Saldo atual em estoque para este item"></i>
+            </th>
+            {% if not bloqueada %}
+            <th style="width:115px" class="text-end">Atender agora</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in itens %}
+          <tr>
+            {# Indicador visual #}
+            <td class="text-center">
+              {% if item.saldo <= 0 %}
+                <i class="bi bi-check-circle-fill text-secondary" title="Finalizado"></i>
+              {% elif item.sit_atend == 'total' %}
+                <i class="bi bi-circle-fill text-success" style="font-size:.6rem;" title="Atendimento total possível"></i>
+              {% elif item.sit_atend == 'parcial' %}
+                <i class="bi bi-circle-fill text-warning" style="font-size:.6rem;" title="Atendimento parcial (est.: {{ item.saldo_estoque|floatformat:3 }})"></i>
+              {% else %}
+                <i class="bi bi-circle-fill text-danger" style="font-size:.6rem;" title="Sem estoque"></i>
+              {% endif %}
+            </td>
+            <td class="font-monospace small">{{ item.identificacao|default:"—" }}</td>
+            <td class="text-end font-monospace">{{ item.quantidade|floatformat:3 }}</td>
+            <td class="text-end font-monospace {% if item.atendido > 0 %}text-success{% endif %}">
+              {{ item.atendido|floatformat:3 }}
+            </td>
+            <td class="text-end font-monospace
+              {% if item.saldo <= 0 %}text-muted
+              {% else %}text-warning-emphasis fw-semibold{% endif %}">
+              {{ item.saldo|floatformat:3 }}
+            </td>
+            {# Saldo em estoque #}
+            <td class="text-end font-monospace
+              {% if item.saldo_estoque is None %}text-muted
+              {% elif item.saldo_estoque <= 0 %}text-danger fw-semibold
+              {% elif item.sit_atend == 'total' %}text-success fw-semibold
+              {% else %}text-warning fw-semibold{% endif %}">
+              {% if item.saldo_estoque is None %}
+                <span class="text-muted small">—</span>
+              {% else %}
+                {{ item.saldo_estoque|floatformat:3 }}
+              {% endif %}
+            </td>
+            {% if not bloqueada %}
+            <td class="text-end">
+              {% if item.saldo > 0 %}
+                {% if item.saldo_estoque is not None and item.saldo_estoque > 0 %}
+                  {# Sugestão: min(saldo_req, saldo_estoque) #}
+                  {% with sugest=item.saldo|floatformat:3 %}
+                  <input type="number" name="atender_{{ item.pk }}"
+                         class="form-control form-control-sm text-end font-monospace
+                           {% if item.sit_atend == 'sem_estoque' %}border-danger{% elif item.sit_atend == 'parcial' %}border-warning{% endif %}"
+                         style="width:108px;"
+                         step="0.001" min="0.001"
+                         max="{{ item.saldo }}"
+                         value="{% if item.sit_atend == 'total' %}{{ item.saldo|floatformat:3 }}{% elif item.sit_atend == 'parcial' %}{{ item.saldo_estoque|floatformat:3 }}{% endif %}"
+                         placeholder="{{ item.saldo|floatformat:3 }}">
+                  {% endwith %}
+                {% else %}
+                  <span class="text-danger small"><i class="bi bi-x-circle me-1"></i>Sem estoque</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not bloqueada %}
+      <div class="card-body pt-2 pb-3 d-flex align-items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-success">
+          <i class="bi bi-check-lg me-1"></i>Registrar Atendimento
+        </button>
+        <small class="text-muted">
+          Os campos pré-preenchidos refletem o máximo disponível em estoque.
+          Ajuste se necessário antes de confirmar.
+        </small>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{# ── Movimentos gerados ──────────────────────────────────────────────────────── #}
+{% if movimentos %}
+<div class="card form-card">
+  <div class="card-header py-2 fw-semibold small">
+    <i class="bi bi-clock-history me-1 text-info"></i>Movimentos de Estoque Gerados
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:100px">Data</th>
+          <th>Identificação</th>
+          <th style="width:80px" class="text-center">Tipo</th>
+          <th style="width:110px" class="text-end">Quantidade</th>
+          <th style="width:120px">Usuário</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mov in movimentos %}
+        <tr>
+          <td>{{ mov.data|date:"d/m/Y" }}</td>
+          <td class="font-monospace small">{{ mov.identificacao }}</td>
+          <td class="text-center">
+            <span class="badge {% if mov.ent_sai == 'E' %}bg-success{% else %}bg-danger{% endif %}">
+              {{ mov.get_ent_sai_display }}
+            </span>
+          </td>
+          <td class="text-end font-monospace">{{ mov.quantidade|floatformat:3 }}</td>
+          <td class="small text-muted">{{ mov.usuariologado }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

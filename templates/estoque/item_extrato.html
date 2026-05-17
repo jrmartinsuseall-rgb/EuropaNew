@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Extrato — {{ item.descricao }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:saldo_list' %}">Saldo por Item</a></li>
+<li class="breadcrumb-item active">Extrato</li>
+{% endblock %}
+
+{% block content %}
+
+{# ── Cabeçalho ────────────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h5 class="mb-0">
+      <i class="bi bi-clock-history me-2 text-warning"></i>Extrato de Movimentação
+    </h5>
+    <small class="text-muted">
+      <span class="font-monospace fw-semibold">{{ item.identificacao|default:"—" }}</span>
+      &bull; {{ item.descricao }}
+      {% if item.grupo %}&bull; {{ item.grupo.descricao }}{% endif %}
+      &bull; Unid.: {{ item.unidade }}
+    </small>
+  </div>
+  <a href="{% url 'estoque:item_extrato_imprimir' item.pk %}?data_base={{ data_base_str }}"
+     target="_blank" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-printer me-1"></i>Imprimir
+  </a>
+</div>
+
+{# ── Filtro de data base ──────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="form-label small mb-0">Data base</label>
+        <input type="date" name="data_base" value="{{ data_base_str }}"
+               class="form-control form-control-sm" style="width:155px;">
+      </div>
+      <div class="col-auto d-flex align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary mt-3">
+          <i class="bi bi-funnel me-1"></i>Atualizar
+        </button>
+      </div>
+      <div class="col-auto d-flex align-items-end">
+        <small class="text-muted mt-3">
+          Exibe saldo acumulado até {{ data_base|date:"d/m/Y" }} e os movimentos a partir desta data.
+        </small>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Tabela de extrato ────────────────────────────────────────────────────── #}
+<div class="card form-card mb-3">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0" style="font-size:.82rem;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:95px">Data</th>
+          <th>Descrição</th>
+          <th style="width:90px" class="text-center">Documento</th>
+          <th style="width:100px" class="text-end">Entrada</th>
+          <th style="width:100px" class="text-end">Saída</th>
+          <th style="width:110px" class="text-end">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        {# Linha de saldo inicial #}
+        <tr class="table-secondary fw-semibold">
+          <td class="font-monospace small">{{ data_base|date:"d/m/Y" }}</td>
+          <td><i class="bi bi-flag-fill text-secondary me-1" style="font-size:.75rem;"></i>Saldo Inicial</td>
+          <td class="text-center text-muted">—</td>
+          <td class="text-end text-muted">—</td>
+          <td class="text-end text-muted">—</td>
+          <td class="text-end font-monospace
+            {% if saldo_inicial < 0 %}text-danger{% elif saldo_inicial == 0 %}text-muted{% else %}text-success{% endif %}">
+            {{ saldo_inicial|floatformat:3 }}
+          </td>
+        </tr>
+
+        {# Movimentos #}
+        {% for linha in linhas %}
+        <tr>
+          <td class="font-monospace small text-muted">{{ linha.data|date:"d/m/Y" }}</td>
+          <td>
+            <span class="badge me-1
+              {% if linha.origem == 'AJ' %}bg-info-subtle text-info-emphasis
+              {% elif linha.origem == 'RQ' %}bg-warning-subtle text-warning-emphasis
+              {% elif linha.origem == 'NF' %}bg-success-subtle text-success-emphasis
+              {% elif linha.origem == 'PD' %}bg-primary-subtle text-primary-emphasis
+              {% else %}bg-secondary-subtle text-secondary-emphasis{% endif %}"
+              style="font-size:.65rem;">{{ linha.origem }}</span>
+            {{ linha.descricao }}
+          </td>
+          <td class="text-center font-monospace small text-muted">
+            {% if linha.idorigem %}#{{ linha.idorigem }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end font-monospace {% if linha.entrada > 0 %}text-success fw-semibold{% else %}text-muted{% endif %}">
+            {% if linha.entrada > 0 %}+{{ linha.entrada|floatformat:3 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end font-monospace {% if linha.saida > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+            {% if linha.saida > 0 %}-{{ linha.saida|floatformat:3 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-end font-monospace fw-semibold
+            {% if linha.saldo < 0 %}text-danger
+            {% elif linha.saldo == 0 %}text-muted
+            {% else %}text-success{% endif %}">
+            {{ linha.saldo|floatformat:3 }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4 small">
+            <i class="bi bi-inbox me-1"></i>Nenhum movimento a partir de {{ data_base|date:"d/m/Y" }}.
+          </td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+      <tfoot class="table-light fw-semibold">
+        <tr>
+          <td colspan="3" class="text-end small text-muted">Saldo Final</td>
+          <td colspan="3" class="text-end font-monospace
+            {% if saldo_final < 0 %}text-danger
+            {% elif saldo_final == 0 %}text-muted
+            {% else %}text-success{% endif %}">
+            {{ saldo_final|floatformat:3 }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="d-flex gap-2">
+  <a href="{% url 'estoque:saldo_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+{% endblock %}

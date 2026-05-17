@@ -1,0 +1,106 @@
+{% if not linhas %}
+<div class="alert alert-info">
+  <i class="bi bi-info-circle me-1"></i>
+  Nenhum cliente com Valor Referência cadastrado e ativo.
+</div>
+{% else %}
+
+{# Contagem de duplicatas para aviso antecipado #}
+{% with n_dup=0 %}
+{% for l in linhas %}{% if l.duplicado %}{% with n_dup=n_dup|add:1 %}{% endwith %}{% endif %}{% endfor %}
+{% endwith %}
+
+<form id="form-gerar" method="post" action="{% url 'financeiro:contarec_assistente_gerar' %}">
+  {% csrf_token %}
+  <input type="hidden" name="vencimento" value="{{ vencimento|date:'Y-m-d' }}">
+
+  <div class="card form-card">
+    <div class="card-header py-2 d-flex align-items-center gap-2">
+      <i class="bi bi-people text-primary"></i>
+      <span class="fw-semibold">Clientes — vencimento {{ vencimento|date:"d/m/Y" }}</span>
+      <span class="badge bg-primary ms-2">{{ linhas|length }} cliente(s)</span>
+      <div class="form-check ms-auto mb-0">
+        <input class="form-check-input" type="checkbox" id="check-all" checked>
+        <label class="form-check-label small" for="check-all">Marcar todos</label>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:40px"></th>
+            <th>Cliente</th>
+            <th style="width:210px">Nº Documento</th>
+            <th style="width:140px" class="text-end">Valor (R$)</th>
+            <th style="width:80px" class="text-center">Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in linhas %}
+          <tr class="{% if l.duplicado %}table-warning{% endif %}">
+            <td class="text-center">
+              {% if not l.duplicado %}
+              <input class="form-check-input row-check" type="checkbox"
+                     name="selecionado" value="{{ l.cliente.pk }}" checked>
+              {% endif %}
+            </td>
+            <td class="small">
+              <span class="font-monospace text-muted me-1" style="font-size:.75rem;">
+                #{{ l.cliente.idcliforemp }}</span>
+              {{ l.cliente.razao|default:l.cliente.nome }}
+            </td>
+            <td>
+              {% if not l.duplicado %}
+              <input type="text" name="doc_{{ l.cliente.pk }}"
+                     value="{{ l.numerodoc }}"
+                     class="form-control form-control-sm font-monospace"
+                     maxlength="30">
+              {% else %}
+              <span class="font-monospace small text-warning">
+                <i class="bi bi-exclamation-triangle me-1"></i>já lançado neste mês
+              </span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if not l.duplicado %}
+              <input type="number" name="valor_{{ l.cliente.pk }}"
+                     value="{{ l.cliente.valorreferencia|stringformat:'s' }}"
+                     min="0.01" step="0.01"
+                     class="form-control form-control-sm text-end"
+                     style="width:120px; margin-left:auto;">
+              {% else %}
+              <span class="text-muted small">{{ l.cliente.valorreferencia }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if l.duplicado %}
+              <span class="badge bg-warning text-dark">Duplicado</span>
+              {% else %}
+              <span class="badge bg-success">Novo</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center py-2">
+      <small class="text-muted">
+        Linhas marcadas em amarelo já possuem título nesta competência e serão ignoradas.
+      </small>
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-check2-all me-1"></i>Gerar Lançamentos
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+  // Marcar / desmarcar todos
+  document.getElementById('check-all')?.addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = this.checked);
+  });
+</script>
+{% endif %}

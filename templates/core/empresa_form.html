@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Dados da Empresa{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">Dados da Empresa</li>
+{% endblock %}
+
+{% block content %}
+
+<div x-data="{ aba: 'principal' }">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">
+      <i class="bi bi-building me-2 text-primary"></i>Dados da Empresa
+    </h5>
+    {% if objeto %}<span class="text-muted small">Registro #{{ objeto.pk }}</span>{% endif %}
+  </div>
+
+  <form method="post" autocomplete="off">
+    {% csrf_token %}
+
+    <div class="card form-card">
+
+      <!-- Cabeçalho fixo -->
+      <div class="card-header">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label">Razão Social <span class="text-danger">*</span></label>
+            {{ form.razao }}
+            {% if form.razao.errors %}<div class="text-danger small mt-1">{{ form.razao.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">CNPJ <span class="text-danger">*</span></label>
+            {{ form.cnpj }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Insc. Estadual</label>
+            {{ form.ie }}
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            <div class="form-check mb-2">
+              {{ form.inativo }}
+              <label class="form-check-label" for="{{ form.inativo.id_for_label }}">Inativa</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Abas -->
+      <div class="card-body p-0">
+        <ul class="nav nav-tabs px-3 pt-2 border-bottom">
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'principal' }" @click="aba = 'principal'">
+              <i class="bi bi-telephone me-1"></i>Contato
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'endereco' }" @click="aba = 'endereco'">
+              <i class="bi bi-geo-alt me-1"></i>Endereço
+            </button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="nav-link" :class="{ active: aba === 'parametros' }" @click="aba = 'parametros'">
+              <i class="bi bi-gear me-1"></i>Parâmetros
+            </button>
+          </li>
+        </ul>
+
+        <div class="p-3">
+
+          <!-- Aba: Contato -->
+          <div x-show="aba === 'principal'" x-cloak>
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">Telefone</label>
+                {{ form.fone }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Celular</label>
+                {{ form.celular }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fone Assistência</label>
+                {{ form.foneass }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">WhatsApp</label>
+                {{ form.fonewhats }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">E-mail</label>
+                {{ form.email }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Endereço -->
+          <div x-show="aba === 'endereco'" x-cloak>
+            <div class="row g-3">
+              <div class="col-md-2">
+                <label class="form-label">CEP</label>
+                {{ form.cep }}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Endereço</label>
+                {{ form.endereco }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Nº</label>
+                {{ form.numero }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Bairro</label>
+                {{ form.bairro }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Cidade</label>
+                {{ form.cidade }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba: Parâmetros -->
+          <div x-show="aba === 'parametros'" x-cloak>
+            <div class="row g-3">
+
+              <div class="col-12">
+                <small class="text-muted">Configurações de Baixa</small><hr class="mt-1 mb-2">
+              </div>
+              <div class="col-auto">
+                <div class="form-check">
+                  {{ form.set_baixadireta }}
+                  <label class="form-check-label" for="{{ form.set_baixadireta.id_for_label }}">
+                    Baixa Direta
+                  </label>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="form-check">
+                  {{ form.set_baixafat }}
+                  <label class="form-check-label" for="{{ form.set_baixafat.id_for_label }}">
+                    Baixa no Faturamento
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-12 mt-3">
+                <small class="text-muted">Controle de Acesso</small><hr class="mt-1 mb-2">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label form-label-sm mb-0">
+                  Expiração de Senha (dias)
+                  <span class="text-muted fw-normal ms-1" style="font-size:.75rem;">— 0 = nunca expira</span>
+                </label>
+                {{ form.senha_expiry_days }}
+              </div>
+
+              <div class="col-12 mt-3">
+                <small class="text-muted">Integrações Externas</small><hr class="mt-1 mb-2">
+              </div>
+              <div class="col-md-8">
+                <label class="form-label form-label-sm mb-0">
+                  Google Maps API Key
+                  <span class="text-muted fw-normal ms-1" style="font-size:.75rem;">
+                    — vazio = links simples (sem custo) · preenchido = mapas embutidos (Fase 2)
+                  </span>
+                </label>
+                {{ form.maps_api_key }}
+              </div>
+
+              <div class="col-12 mt-2">
+                <small class="text-muted">Cores dos Módulos (legado VDF)</small><hr class="mt-1 mb-2">
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Cadastro</label>
+                {{ form.cor_cad }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Admin</label>
+                {{ form.cor_adm }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">CRM</label>
+                {{ form.cor_tel }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Financeiro</label>
+                {{ form.cor_fin }}
+              </div>
+              <div class="col-md-1">
+                <label class="form-label">Estoque</label>
+                {{ form.cor_est }}
+              </div>
+
+            </div>
+          </div>
+
+        </div><!-- /p-3 -->
+      </div><!-- /card-body -->
+
+      <div class="card-footer d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg"></i> Salvar
+        </button>
+        <a href="/home/" class="btn btn-secondary ms-auto">
+          <i class="bi bi-x-lg"></i> Cancelar
+        </a>
+      </div>
+
+    </div><!-- /card -->
+  </form>
+
+</div><!-- /x-data -->
+{% endblock %}

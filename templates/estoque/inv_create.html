@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Novo Inventário{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:inv_list' %}">Inventários</a></li>
+<li class="breadcrumb-item active">Novo</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-clipboard2-check me-2 text-info"></i>Novo Inventário de Estoque</h5>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Identificação</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label small">Descrição / Referência</label>
+          <input type="text" name="descricao" class="form-control form-control-sm"
+                 placeholder="Ex.: Inventário Trimestral Abr/2026">
+        </div>
+        <div class="col-md-7">
+          <label class="form-label small">Observação</label>
+          <input type="text" name="observacao" class="form-control form-control-sm"
+                 placeholder="Informações complementares (opcional)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card form-card mb-3 border-info-subtle">
+    <div class="card-body py-3">
+      <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-info-circle-fill text-info fs-5 mt-1"></i>
+        <div class="small text-secondary">
+          <strong class="text-body">Itens carregados automaticamente</strong><br>
+          O inventário inclui apenas os itens com <strong>Controla Estoque</strong> marcado no cadastro.
+          Itens de consumo interno, patrimônio ou serviços (sem esse flag) são ignorados.<br>
+          O <strong>Saldo Sistema</strong> de cada item é capturado no momento da abertura e
+          congelado como referência — qualquer movimentação posterior ao inventário não altera este valor base.
+          A diferença é calculada como <em>Saldo Físico − Saldo Sistema</em>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-clipboard2-plus me-1"></i> Abrir Inventário
+    </button>
+    <a href="{% url 'estoque:inv_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

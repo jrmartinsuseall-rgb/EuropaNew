@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Configuração de Comissão{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'vendas:acerto_list' %}">Comissões</a></li>
+<li class="breadcrumb-item active">Configuração</li>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 small" role="alert">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">
+    <i class="bi bi-sliders me-2 text-primary"></i>Configuração de Comissão
+  </h5>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card form-card">
+    <div class="card-body">
+
+      <div class="mb-3">
+        <small class="text-muted">Televendas</small><hr class="mt-1 mb-2">
+      </div>
+      <div class="row g-3 mb-4">
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">À Vista %</label>
+          <input type="number" name="telav" step="0.01" min="0"
+                 value="{{ config.telav|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Prazo %</label>
+          <input type="number" name="telprazo" step="0.01" min="0"
+                 value="{{ config.telprazo|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Prêmio %</label>
+          <input type="number" name="telpremio" step="0.01" min="0"
+                 value="{{ config.telpremio|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <small class="text-muted">MEI</small><hr class="mt-1 mb-2">
+      </div>
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">À Vista %</label>
+          <input type="number" name="meiav" step="0.01" min="0"
+                 value="{{ config.meiav|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Prazo %</label>
+          <input type="number" name="meiprazo" step="0.01" min="0"
+                 value="{{ config.meiprazo|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">Prêmio %</label>
+          <input type="number" name="meipremio" step="0.01" min="0"
+                 value="{{ config.meipremio|default:'0.00' }}"
+                 class="form-control form-control-sm">
+        </div>
+      </div>
+
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-check-lg me-1"></i>Salvar
+      </button>
+      <a href="{% url 'vendas:acerto_list' %}" class="btn btn-secondary btn-sm ms-auto">
+        <i class="bi bi-arrow-left me-1"></i>Voltar
+      </a>
+    </div>
+  </div>
+</form>
+
+{% endblock %}

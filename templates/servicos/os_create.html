@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% block title %}Nova OS{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+{% if cli %}
+<li class="breadcrumb-item"><a href="{% url 'servicos:crm_ficha' cli.pk %}">{{ cli.razao|default:cli.nome|truncatechars:30 }}</a></li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'servicos:os_list' %}">OS</a></li>
+{% endif %}
+<li class="breadcrumb-item active">Nova OS</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.item-lookup-result { position:absolute; z-index:200; background:#fff; border:1px solid #dee2e6;
+  border-radius:.375rem; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.item-lookup-result .lookup-item { padding:.4rem .75rem; cursor:pointer; font-size:.82rem; }
+.item-lookup-result .lookup-item:hover { background:#f0f4ff; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CONDICOES_JSON = {{ condicoes_json|safe }};
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-tools me-2 text-warning"></i>Nova Ordem de Serviço</h5>
+</div>
+
+<form method="post" id="form-os"
+  x-data="{
+    tabela_id: '',
+    condicao_pk: '',
+    condicao_parcelas: 1,
+    condicao_dias: 30,
+    dataprevisao: '',
+    itens: [],
+    parcelas: [],
+    buscaItem: '',
+    resultadosItem: [],
+    novoItemId: null,
+    novoItemDesc: '',
+    novoItemIdent: '',
+    novoItemTipo: '',
+    novoItemServicoPaiTid: 0,
+    novoItemPreco: 0,
+    novoItemQty: 1,
+    novoItemInstal: 0,
+    _nextTid: 1,
+    get total() {
+      return this.itens.reduce((s,i) => s + parseFloat(i.valortotal||0), 0);
+    },
+    get servicosDisponiveis() {
+      return this.itens.filter(it => it.tipo_item === 'S');
+    },
+    async buscarItem(q) {
+      if (q.length < 2) { this.resultadosItem = []; return; }
+      const r = await fetch(`/cadastros/lookup/item/?q=${encodeURIComponent(q)}&formato=json`);
+      this.resultadosItem = await r.json();
+    },
+    async selecionarItem(id, desc, tipo) {
+      this.novoItemId   = id;
+      this.novoItemDesc = desc;
+      this.novoItemTipo = tipo || 'P';
+      this.buscaItem    = desc;
+      this.resultadosItem = [];
+      this.novoItemPreco = 0;
+      this.novoItemIdent = '';
+      if (this.tabela_id) {
+        const r = await fetch(`/cadastros/lookup/tabela-item/?tabela=${this.tabela_id}&item=${id}&parcelas=${this.condicao_parcelas}`);
+        const d = await r.json();
+        this.novoItemPreco = d.preco;
+        this.novoItemIdent = d.identificacao;
+      }
+    },
+    adicionarItem() {
+      if (!this.novoItemId) return;
+      const qty   = parseFloat(this.novoItemQty)   || 1;
+      const preco = parseFloat(this.novoItemPreco)  || 0;
+      const ins   = parseFloat(this.novoItemInstal) || 0;
+      const tipo  = this.novoItemTipo || 'P';
+      const pai   = (tipo === 'P' || tipo === 'M') ? (parseInt(this.novoItemServicoPaiTid) || 0) : 0;
+      const tid   = this._nextTid++;
+      this.itens.push({
+        _tid: tid,
+        item_id: this.novoItemId, descricao: this.novoItemDesc,
+        identificacao: this.novoItemIdent,
+        quantidade: qty, valorunitario: preco, instalacao: ins,
+        valortotal: (qty * preco + ins).toFixed(2),
+        tipo_item: tipo,
+        servico_pai_tid: pai,
+      });
+      this.novoItemId=null; this.novoItemDesc=''; this.buscaItem='';
+      this.novoItemPreco=0; this.novoItemQty=1; this.novoItemInstal=0; this.novoItemIdent='';
+      this.novoItemTipo=''; this.novoItemServicoPaiTid=0;
+      this.calcularParcelas();
+    },
+    removerItem(i) {
+      const tid = this.itens[i]._tid;
+      if (this.itens[i].tipo_item === 'S') {
+        this.itens.forEach(it => { if (it.servico_pai_tid === tid) it.servico_pai_tid = 0; });
+      }
+      this.itens.splice(i,1);
+      this.calcularParcelas();
+    },
+    onCondicaoChange(e) {
+      const pk = e.target.value;
+      const dados = CONDICOES_JSON[pk] || {parcelas:1, dias:30};
+      this.condicao_pk       = pk;
+      this.condicao_parcelas = dados.parcelas;
+      this.condicao_dias     = dados.dias;
+      this.calcularParcelas();
+      if (this.novoItemId && this.tabela_id) this.selecionarItem(this.novoItemId, this.novoItemDesc, this.novoItemTipo);
+    },
+    calcularParcelas() {
+      if (!this.dataprevisao || this.condicao_parcelas < 1 || this.total <= 0) { this.parcelas=[]; return; }
+      const n    = parseInt(this.condicao_parcelas);
+      const dias = parseInt(this.condicao_dias);
+      const tot  = parseFloat(this.total);
+      const base = parseFloat((tot / n).toFixed(2));
+      const [y,m,d] = this.dataprevisao.split('-').map(Number);
+      this.parcelas = Array.from({length: n}, (_,i) => {
+        const dt   = new Date(y, m-1, d + dias*(i+1));
+        const venc = dt.toISOString().split('T')[0];
+        const val  = i < n-1 ? base : parseFloat((tot - base*(n-1)).toFixed(2));
+        return { parcela: i+1, vencimento: venc, valor: val };
+      });
+    },
+    formatDate(s) {
+      if (!s) return '—';
+      const [y,m,d] = s.split('-');
+      return `${d}/${m}/${y}`;
+    },
+    fmtVal(v) { return parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); },
+    tipoBadgeClass(t) {
+      if (t === 'S') return 'bg-info-subtle text-info-emphasis';
+      if (t === 'M') return 'bg-warning-subtle text-warning-emphasis';
+      return 'bg-secondary-subtle text-secondary-emphasis';
+    },
+    tipoLabel(t) {
+      if (t === 'S') return 'Serviço';
+      if (t === 'M') return 'Mat.-Prima';
+      return 'Produto';
+    },
+  }"
+  @submit.prevent="
+    document.getElementById('itens_json').value   = JSON.stringify(itens);
+    document.getElementById('parcelas_json').value = JSON.stringify(parcelas);
+    $el.submit();
+  ">
+  {% csrf_token %}
+  <input type="hidden" id="itens_json"   name="itens_json">
+  <input type="hidden" id="parcelas_json" name="parcelas_json">
+
+  {# ── Cabeçalho ───────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Cabeçalho</div>
+    <div class="card-body">
+      <div class="row g-3">
+
+        {# Cliente #}
+        <div class="col-md-6">
+          <label class="form-label small">Cliente <span class="text-danger">*</span></label>
+          {% if cli %}
+          <input type="hidden" name="cliente" value="{{ cli.pk }}">
+          <input type="text" class="form-control form-control-sm"
+                 value="{{ cli.razao|default:cli.nome }}" readonly>
+          {% else %}
+          {{ form.cliente }}
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small">Data Previsão <span class="text-danger">*</span></label>
+          <input type="date" name="dataprevisao" class="form-control form-control-sm"
+                 x-model="dataprevisao" @change="calcularParcelas()" required>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label small">Período</label>
+          {{ form.atend_periodo }}
+        </div>
+
+        <div class="col-md-1">
+          <label class="form-label small">Hora</label>
+          {{ form.atend_hora }}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Equipe + Comercial ──────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Equipe e Comercial</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small">Vendedor</label>
+          {{ form.vendedor }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Técnico</label>
+          {{ form.tecnico }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Tabela de Preço</label>
+          <select name="tabela" class="form-select form-select-sm"
+                  x-model="tabela_id"
+                  @change="if(novoItemId) selecionarItem(novoItemId, novoItemDesc, novoItemTipo)">
+            {% for val, lbl in form.tabela.field.choices %}
+            <option value="{{ val }}">{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Condição de Pagamento</label>
+          <select name="condicao" class="form-select form-select-sm"
+                  @change="onCondicaoChange($event)">
+            {% for val, lbl in form.condicao.field.choices %}
+            <option value="{{ val }}">{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Método Pagamento</label>
+          {{ form.metodo }}
+        </div>
+        <div class="col-md-9">
+          <label class="form-label small">Observações</label>
+          {{ form.atend_obs }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Itens ───────────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">
+      <i class="bi bi-list-ul me-1 text-success"></i>Itens
+      <span class="badge bg-secondary ms-1" x-text="itens.length"></span>
+    </div>
+    <div class="card-body pb-2">
+
+      {# Linha de adição de item #}
+      <div class="row g-2 align-items-end mb-2">
+        <div class="col-md-4 position-relative">
+          <label class="form-label small">Buscar Item</label>
+          <input type="text" class="form-control form-control-sm"
+                 placeholder="Digite para buscar..."
+                 x-model="buscaItem"
+                 @input.debounce.300ms="buscarItem($event.target.value)"
+                 autocomplete="off">
+          <div class="item-lookup-result" x-show="resultadosItem.length > 0" @click.outside="resultadosItem=[]">
+            <template x-for="it in resultadosItem" :key="it.id">
+              <div class="lookup-item" @click="selecionarItem(it.id, it.descricao, it.tipo_item)">
+                <span x-text="it.descricao"></span>
+                <span class="text-muted ms-1 small" x-text="it.identificacao ? '('+it.identificacao+')' : ''"></span>
+                <span class="ms-1 badge" :class="tipoBadgeClass(it.tipo_item)"
+                      x-text="tipoLabel(it.tipo_item)" style="font-size:.65rem;"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small">Qtd</label>
+          <input type="number" class="form-control form-control-sm" step="0.001" min="0.001"
+                 x-model="novoItemQty" @change="novoItemQty=parseFloat($event.target.value)||1">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Preço Unit.</label>
+          <input type="text" inputmode="decimal" class="form-control form-control-sm"
+                 :value="novoItemPreco > 0 ? formatBRL(novoItemPreco) : ''"
+                 @change="novoItemPreco = parseBRL($event.target.value)"
+                 placeholder="0,00">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Instalação</label>
+          <input type="text" inputmode="decimal" class="form-control form-control-sm"
+                 :value="novoItemInstal > 0 ? formatBRL(novoItemInstal) : ''"
+                 @change="novoItemInstal = parseBRL($event.target.value)"
+                 placeholder="0,00">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Total</label>
+          <input type="text" class="form-control form-control-sm bg-light" readonly
+                 :value="formatBRL((novoItemQty||1)*novoItemPreco + novoItemInstal)">
+        </div>
+        <div class="col-md-1">
+          <button type="button" class="btn btn-sm btn-success w-100"
+                  @click="adicionarItem()" :disabled="!novoItemId">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      {# Vincular ao serviço (aparece apenas p/ P/M quando há serviços na lista) #}
+      <div class="row g-2 mb-3"
+           x-show="(novoItemTipo === 'P' || novoItemTipo === 'M') && servicosDisponiveis.length > 0"
+           style="display:none;">
+        <div class="col-md-4">
+          <label class="form-label small text-muted">
+            <i class="bi bi-diagram-2 me-1"></i>Vincular ao serviço <span class="text-muted fst-italic">(opcional)</span>
+          </label>
+          <select class="form-select form-select-sm" x-model="novoItemServicoPaiTid">
+            <option value="0">— Independente —</option>
+            <template x-for="sv in servicosDisponiveis" :key="sv._tid">
+              <option :value="sv._tid" x-text="sv.descricao"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+
+      {# Lista de itens adicionados #}
+      <template x-if="itens.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-1" style="font-size:.8rem;">
+            <thead class="table-light">
+              <tr>
+                <th style="width:70px" class="text-center">Tipo</th>
+                <th>Item</th>
+                <th style="width:90px">Identificação</th>
+                <th style="width:65px" class="text-end">Qtd</th>
+                <th style="width:90px" class="text-end">Preço</th>
+                <th style="width:90px" class="text-end">Instalação</th>
+                <th style="width:90px" class="text-end fw-semibold">Total</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(it, idx) in itens" :key="it._tid">
+                <tr :class="it.tipo_item === 'S' ? 'table-light' : ''">
+                  <td class="text-center">
+                    <span class="badge" :class="tipoBadgeClass(it.tipo_item)" x-text="tipoLabel(it.tipo_item)"></span>
+                  </td>
+                  <td>
+                    <span x-show="it.servico_pai_tid > 0" class="text-muted me-1" style="font-size:.75rem;">└</span>
+                    <span :class="it.tipo_item === 'S' ? 'fw-semibold' : ''" x-text="it.descricao"></span>
+                  </td>
+                  <td class="text-muted small" x-text="it.identificacao||'—'"></td>
+                  <td class="text-end" x-text="parseFloat(it.quantidade).toFixed(3)"></td>
+                  <td class="text-end font-monospace" x-text="fmtVal(it.valorunitario)"></td>
+                  <td class="text-end font-monospace" x-text="fmtVal(it.instalacao)"></td>
+                  <td class="text-end font-monospace fw-semibold" x-text="fmtVal(it.valortotal)"></td>
+                  <td>
+                    <button type="button" class="btn btn-xs btn-outline-danger p-0 px-1"
+                            @click="removerItem(idx)">
+                      <i class="bi bi-x" style="font-size:.8rem;"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="6" class="text-end small fw-semibold">Total da OS:</td>
+                <td class="text-end font-monospace fw-bold" x-text="'R$ '+fmtVal(total)"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </template>
+      <template x-if="itens.length === 0">
+        <div class="text-center text-muted small py-2">Nenhum item adicionado.</div>
+      </template>
+    </div>
+  </div>
+
+  {# ── Parcelas ────────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">
+        <i class="bi bi-calendar-check me-1 text-info"></i>Parcelas
+        <span class="badge bg-secondary ms-1" x-text="parcelas.length"></span>
+      </span>
+      <button type="button" class="btn btn-sm btn-outline-info btn-sm"
+              @click="calcularParcelas()"
+              :disabled="!dataprevisao || itens.length===0 || !condicao_pk">
+        <i class="bi bi-calculator me-1"></i> Calcular
+      </button>
+    </div>
+    <div class="card-body py-2">
+      <template x-if="parcelas.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0" style="font-size:.8rem;">
+            <thead class="table-light">
+              <tr>
+                <th style="width:60px" class="text-center">Parcela</th>
+                <th style="width:110px">Vencimento</th>
+                <th class="text-end">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in parcelas" :key="p.parcela">
+                <tr>
+                  <td class="text-center" x-text="p.parcela"></td>
+                  <td x-text="formatDate(p.vencimento)"></td>
+                  <td class="text-end font-monospace" x-text="'R$ '+fmtVal(p.valor)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <template x-if="parcelas.length === 0">
+        <div class="text-muted small text-center py-2">
+          Adicione itens, selecione a condição e clique em Calcular.
+        </div>
+      </template>
+    </div>
+  </div>
+
+  {# ── Ações ───────────────────────────────────────────────── #}
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"
+            :disabled="itens.length === 0">
+      <i class="bi bi-check-lg me-1"></i> Lançar OS
+    </button>
+    <a href="{% if cli %}{% url 'servicos:crm_ficha' cli.pk %}{% else %}{% url 'servicos:os_list' %}{% endif %}"
+       class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}

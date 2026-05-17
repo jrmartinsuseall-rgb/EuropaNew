@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Novo Ajuste de Estoque{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:ajuste_list' %}">Ajustes</a></li>
+<li class="breadcrumb-item active">Novo</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.item-lookup-result { position:absolute; z-index:200; background:#fff; border:1px solid #dee2e6;
+  border-radius:.375rem; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.item-lookup-result .lookup-item { padding:.4rem .75rem; cursor:pointer; font-size:.82rem; }
+.item-lookup-result .lookup-item:hover { background:#f0f4ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-tools me-2 text-danger"></i>Novo Ajuste de Estoque</h5>
+</div>
+
+<div class="alert alert-danger py-2 small d-flex align-items-start gap-2 mb-3">
+  <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+  <div>
+    <strong>Atenção:</strong> ajustes avulsos alteram o saldo diretamente e ficam registrados no extrato do item.
+    O motivo é <strong>obrigatório</strong> e será exibido no histórico de movimentação para auditoria.
+    Prefira o <a href="{% url 'estoque:inv_create' %}" class="alert-link">Inventário</a> para correções em lote.
+  </div>
+</div>
+
+<form method="post"
+  x-data="{
+    itemId: null,
+    itemDesc: '',
+    itemSaldo: null,
+    buscaItem: '',
+    resultadosItem: [],
+
+    async buscarItem(q) {
+      if (q.length < 2) { this.resultadosItem = []; return; }
+      const r = await fetch('/cadastros/lookup/item/?q=' + encodeURIComponent(q) + '&formato=json&controla_estoque=1');
+      this.resultadosItem = await r.json();
+    },
+    selecionarItem(id, desc, saldo) {
+      this.itemId    = id;
+      this.itemDesc  = desc;
+      this.itemSaldo = saldo;
+      this.buscaItem = desc;
+      this.resultadosItem = [];
+    },
+  }">
+  {% csrf_token %}
+  <input type="hidden" name="item_id" :value="itemId">
+
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Dados do Ajuste</div>
+    <div class="card-body">
+      <div class="row g-3">
+
+        {# Item #}
+        <div class="col-md-5 position-relative">
+          <label class="form-label small">Item <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm"
+                 placeholder="Digite para buscar..."
+                 x-model="buscaItem"
+                 @input.debounce.300ms="buscarItem($event.target.value)"
+                 autocomplete="off">
+          <div class="item-lookup-result" x-show="resultadosItem.length > 0" @click.outside="resultadosItem=[]">
+            <template x-for="it in resultadosItem" :key="it.id">
+              <div class="lookup-item"
+                   @click="selecionarItem(it.id, it.descricao, it.saldoestoque)">
+                <span x-text="it.descricao"></span>
+                <span class="text-muted ms-1 small" x-text="it.identificacao ? '('+it.identificacao+')' : ''"></span>
+              </div>
+            </template>
+          </div>
+          <div x-show="itemSaldo !== null" class="small mt-1">
+            <span class="text-muted">Saldo atual:</span>
+            <strong class="font-monospace ms-1"
+                    :class="itemSaldo <= 0 ? 'text-danger' : 'text-success'"
+                    x-text="parseFloat(itemSaldo).toFixed(3)"></strong>
+          </div>
+        </div>
+
+        {# Tipo E/S #}
+        <div class="col-md-2">
+          <label class="form-label small">Tipo <span class="text-danger">*</span></label>
+          <select name="ent_sai" class="form-select form-select-sm" required>
+            <option value="">— Selecione —</option>
+            <option value="E">↑ Entrada</option>
+            <option value="S">↓ Saída</option>
+          </select>
+        </div>
+
+        {# Quantidade #}
+        <div class="col-md-2">
+          <label class="form-label small">Quantidade <span class="text-danger">*</span></label>
+          <input type="number" name="quantidade"
+                 class="form-control form-control-sm" step="0.001" min="0.001"
+                 value="1" required>
+        </div>
+
+        {# Data #}
+        <div class="col-md-2">
+          <label class="form-label small">Data</label>
+          <input type="date" name="data" class="form-control form-control-sm"
+                 value="{{ data_hoje }}">
+        </div>
+
+        {# Motivo #}
+        <div class="col-12">
+          <label class="form-label small">
+            Motivo / Justificativa <span class="text-danger">*</span>
+          </label>
+          <input type="text" name="observacao"
+                 class="form-control form-control-sm"
+                 placeholder="Descreva o motivo — ex.: Divergência inventário Abr/2026, item danificado em transporte..."
+                 maxlength="200" required>
+          <div class="form-text">Obrigatório. Exibido no extrato do item para auditoria.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-danger" :disabled="!itemId">
+      <i class="bi bi-check-lg me-1"></i> Confirmar Ajuste
+    </button>
+    <a href="{% url 'estoque:ajuste_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}

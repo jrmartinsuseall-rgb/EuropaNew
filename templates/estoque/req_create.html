@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Nova Requisição{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item"><a href="{% url 'estoque:req_list' %}">Requisições</a></li>
+<li class="breadcrumb-item active">Nova</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.item-lookup-result { position:absolute; z-index:200; background:#fff; border:1px solid #dee2e6;
+  border-radius:.375rem; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,.15); }
+.item-lookup-result .lookup-item { padding:.4rem .75rem; cursor:pointer; font-size:.82rem; }
+.item-lookup-result .lookup-item:hover { background:#f0f4ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-arrow-down-up me-2 text-warning"></i>Nova Requisição de Estoque</h5>
+</div>
+
+<form method="post" id="form-req"
+  x-data="{
+    itens: [],
+    buscaItem: '',
+    resultadosItem: [],
+    novoItemId: null,
+    novoItemDesc: '',
+    novoItemIdent: '',
+    novoItemQty: 1,
+    async buscarItem(q) {
+      if (q.length < 2) { this.resultadosItem = []; return; }
+      const r = await fetch(`/cadastros/lookup/item/?q=${encodeURIComponent(q)}&formato=json&controla_estoque=1`);
+      this.resultadosItem = await r.json();
+    },
+    selecionarItem(id, desc, ident) {
+      this.novoItemId   = id;
+      this.novoItemDesc = desc;
+      this.novoItemIdent = ident || '';
+      this.buscaItem    = desc;
+      this.resultadosItem = [];
+    },
+    adicionarItem() {
+      if (!this.novoItemId) return;
+      const qty = parseFloat(this.novoItemQty) || 1;
+      this.itens.push({
+        item_id: this.novoItemId,
+        descricao: this.novoItemDesc,
+        identificacao: this.novoItemIdent,
+        quantidade: qty,
+      });
+      this.novoItemId=null; this.novoItemDesc=''; this.novoItemIdent='';
+      this.buscaItem=''; this.novoItemQty=1;
+    },
+    removerItem(i) { this.itens.splice(i,1); },
+  }"
+  @submit.prevent="
+    document.getElementById('itens_json').value = JSON.stringify(itens);
+    $el.submit();
+  ">
+  {% csrf_token %}
+  <input type="hidden" id="itens_json" name="itens_json">
+
+  {# ── Cabeçalho ───────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">Cabeçalho</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label small">Data <span class="text-danger">*</span></label>
+          {{ form.data }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Origem <span class="text-danger">*</span></label>
+          {{ form.origem }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Solicitante (opcional)</label>
+          {{ form.cliforemp }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Observação</label>
+          {{ form.observacao }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Itens ───────────────────────────────────────────────── #}
+  <div class="card form-card mb-3">
+    <div class="card-header py-2 fw-semibold small">
+      <i class="bi bi-list-ul me-1 text-success"></i>Itens
+      <span class="badge bg-secondary ms-1" x-text="itens.length"></span>
+    </div>
+    <div class="card-body pb-2">
+
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-6 position-relative">
+          <label class="form-label small">Buscar Item</label>
+          <input type="text" class="form-control form-control-sm"
+                 placeholder="Digite para buscar..."
+                 x-model="buscaItem"
+                 @input.debounce.300ms="buscarItem($event.target.value)"
+                 autocomplete="off">
+          <div class="item-lookup-result" x-show="resultadosItem.length > 0" @click.outside="resultadosItem=[]">
+            <template x-for="it in resultadosItem" :key="it.id">
+              <div class="lookup-item" @click="selecionarItem(it.id, it.descricao, it.identificacao)">
+                <span x-text="it.descricao"></span>
+                <span class="text-muted ms-1 small" x-text="it.identificacao ? '('+it.identificacao+')' : ''"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Quantidade</label>
+          <input type="number" class="form-control form-control-sm" step="0.001" min="0.001"
+                 x-model="novoItemQty" @change="novoItemQty=parseFloat($event.target.value)||1">
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-sm btn-success w-100 mt-3"
+                  @click="adicionarItem()" :disabled="!novoItemId">
+            <i class="bi bi-plus-lg"></i> Adicionar
+          </button>
+        </div>
+      </div>
+
+      <template x-if="itens.length > 0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-1" style="font-size:.8rem;">
+            <thead class="table-light">
+              <tr>
+                <th>Descrição</th>
+                <th style="width:120px">Identificação</th>
+                <th style="width:90px" class="text-end">Quantidade</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(it, idx) in itens" :key="idx">
+                <tr>
+                  <td x-text="it.descricao"></td>
+                  <td class="text-muted small" x-text="it.identificacao||'—'"></td>
+                  <td class="text-end" x-text="parseFloat(it.quantidade).toFixed(3)"></td>
+                  <td>
+                    <button type="button" class="btn btn-xs btn-outline-danger p-0 px-1"
+                            @click="removerItem(idx)">
+                      <i class="bi bi-x" style="font-size:.8rem;"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <template x-if="itens.length === 0">
+        <div class="text-center text-muted small py-2">Nenhum item adicionado.</div>
+      </template>
+
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary" :disabled="itens.length === 0">
+      <i class="bi bi-check-lg me-1"></i> Criar Requisição
+    </button>
+    <a href="{% url 'estoque:req_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}

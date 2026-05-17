@@ -1,0 +1,28 @@
+<tr id="portador-{{ p.pk }}" class="{% if p.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ p.pk }}</td>
+  <td>
+    <a href="{% url 'cadastros:portador_edit' p.pk %}" class="text-decoration-none fw-semibold">
+      {{ p.descricao }}
+    </a>
+  </td>
+  <td>
+    {% if p.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'cadastros:portador_edit' p.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button class="btn btn-sm {% if p.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        hx-post="{% url 'cadastros:portador_inativar' p.pk %}"
+        hx-target="#portador-{{ p.pk }}" hx-swap="outerHTML"
+        hx-confirm="{% if p.inativo %}Reativar {{ p.descricao }}?{% else %}Inativar {{ p.descricao }}?{% endif %}">
+        <i class="bi {% if p.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

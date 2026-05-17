@@ -1,0 +1,32 @@
+<tr id="condpag-{{ c.pk }}" class="{% if c.inativo %}text-muted{% endif %}">
+  <td class="text-muted small">{{ c.pk }}</td>
+  <td>
+    <a href="{% url 'cadastros:condpag_edit' c.pk %}" class="text-decoration-none fw-semibold">
+      {{ c.descricao }}
+    </a>
+    {% if c.condicao %}<br><small class="text-muted">{{ c.condicao }}</small>{% endif %}
+  </td>
+  <td class="small text-muted">{{ c.condicao|default:"—" }}</td>
+  <td class="text-center small">{{ c.dias }}</td>
+  <td class="text-center small">{{ c.parcelas }}x</td>
+  <td>
+    {% if c.inativo %}
+      <span class="badge bg-danger">Inativo</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="d-flex gap-1">
+      <a href="{% url 'cadastros:condpag_edit' c.pk %}" class="btn btn-sm btn-outline-primary" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <button class="btn btn-sm {% if c.inativo %}btn-outline-success{% else %}btn-outline-danger{% endif %}"
+        hx-post="{% url 'cadastros:condpag_inativar' c.pk %}"
+        hx-target="#condpag-{{ c.pk }}" hx-swap="outerHTML"
+        hx-confirm="{% if c.inativo %}Reativar {{ c.descricao }}?{% else %}Inativar {{ c.descricao }}?{% endif %}">
+        <i class="bi {% if c.inativo %}bi-check-circle{% else %}bi-slash-circle{% endif %}"></i>
+      </button>
+    </div>
+  </td>
+</tr>

@@ -1,0 +1,15 @@
+{% if cidades %}
+<div class="lookup-dropdown">
+  <div class="list-group list-group-flush">
+    {% for cidade in cidades %}
+    <button
+      type="button"
+      class="list-group-item list-group-item-action"
+      onclick="selecionarCidade({{ cidade.pk }}, '{{ cidade.descricao }} - {{ cidade.uf }}')"
+    >
+      {{ cidade.descricao }} <span class="text-muted ms-1">{{ cidade.uf }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

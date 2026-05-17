@@ -1,0 +1,114 @@
+{% extends "relatorios/base_pdf.html" %}
+{% block title %}Requisição #{{ req.idrequisicao }}{% endblock %}
+{% block titulo %}REQUISIÇÃO DE ESTOQUE{% endblock %}
+{% block subtitulo %}Nº {{ req.idrequisicao }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5pt;
+    margin-bottom: 8pt;
+  }
+  .info-item label {
+    display: block;
+    font-size: 7pt;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: .3pt;
+  }
+  .info-item span { font-size: 8.5pt; font-weight: bold; }
+  .info-item.wide { grid-column: span 2; }
+  .obs-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3pt;
+    padding: 5pt 7pt;
+    font-size: 8pt;
+    margin-bottom: 8pt;
+  }
+  .badge-ok   { background: #d1e7dd; color: #0f5132; }
+  .badge-parc { background: #fff3cd; color: #664d03; }
+  .badge-sem  { background: #f8d7da; color: #842029; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Dados da Requisição ─────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Dados da Requisição</div>
+  <div style="border:1px solid #dee2e6; border-top:none; padding:8pt;">
+    <div class="info-grid-4">
+      <div class="info-item">
+        <label>Data</label>
+        <span>{{ req.data|date:"d/m/Y" }}</span>
+      </div>
+      <div class="info-item">
+        <label>Status</label>
+        <span>{{ req.get_status_display }}</span>
+      </div>
+      <div class="info-item">
+        <label>Origem</label>
+        <span>{{ req.origem|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <label>Data Atendimento</label>
+        <span>{% if req.dataatendi %}{{ req.dataatendi|date:"d/m/Y" }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    {% if req.cliforemp %}
+    <div class="info-grid-4">
+      <div class="info-item wide">
+        <label>Solicitante / Técnico</label>
+        <span>{{ req.cliforemp.razao|default:req.cliforemp.nome }}</span>
+      </div>
+    </div>
+    {% endif %}
+    {% if req.observacao %}
+    <div class="obs-box"><strong>Observação:</strong> {{ req.observacao }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Itens Requisitados ──────────────────────────────────────────── #}
+<div class="secao">
+  <div class="secao-titulo">Itens Requisitados</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:90pt">Identificação</th>
+        <th class="text-center" style="width:60pt">Solicitado</th>
+        <th class="text-center" style="width:60pt">Atendido</th>
+        <th class="text-center" style="width:60pt">Saldo</th>
+        <th class="text-center" style="width:55pt">Situação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in itens %}
+      <tr>
+        <td class="font-mono">{{ it.identificacao }}</td>
+        <td class="text-center">{{ it.quantidade|floatformat:3 }}</td>
+        <td class="text-center">{{ it.atendido|floatformat:3 }}</td>
+        <td class="text-center">{{ it.saldo|floatformat:3 }}</td>
+        <td class="text-center">
+          {% if it.saldo == 0 and it.atendido > 0 %}
+            <span class="badge badge-ok">Total</span>
+          {% elif it.atendido > 0 %}
+            <span class="badge badge-parc">Parcial</span>
+          {% elif it.saldo > 0 %}
+            <span class="badge badge-sem">Pendente</span>
+          {% else %}
+            <span class="badge badge-ok">Finalizado</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-muted">Nenhum item.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

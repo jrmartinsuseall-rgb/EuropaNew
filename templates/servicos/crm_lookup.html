@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}CRM — Consulta de Clientes{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/home/">Início</a></li>
+<li class="breadcrumb-item active">CRM — Clientes</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0"><i class="bi bi-headset me-2 text-info"></i>CRM — Consulta de Clientes</h5>
+</div>
+
+{# Barra de busca com combo adaptativo #}
+<div class="card form-card mb-3"
+     x-data="{
+       ref: '{{ ref|default:'nome' }}',
+       inputType() { return this.ref === 'codigo' ? 'number' : 'text'; },
+       hasMask()   { return this.ref === 'cpfcnpj'; },
+       maskInst: null,
+       initMask() {
+         const el = this.$refs.inputQ;
+         if (this.maskInst) { this.maskInst.destroy(); this.maskInst = null; }
+         if (this.hasMask()) {
+           this.maskInst = IMask(el, {
+             mask: [{ mask: '000.000.000-00' }, { mask: '00.000.000/0000-00' }],
+             dispatch(appended, dynamicMasked) {
+               const n = (dynamicMasked.value + appended).replace(/\D/g,'');
+               return n.length <= 11 ? dynamicMasked.compiledMasks[0] : dynamicMasked.compiledMasks[1];
+             }
+           });
+         }
+       }
+     }"
+     x-init="initMask()"
+     @ref-change="initMask()">
+  <div class="card-body py-2">
+    <form method="get" action="{% url 'servicos:crm_lookup' %}"
+          class="row g-2 align-items-center">
+
+      <div class="col-auto">
+        <select name="ref" class="form-select form-select-sm" style="width:140px;"
+                x-model="ref" @change="$dispatch('ref-change'); $nextTick(()=>initMask())">
+          <option value="nome">Nome</option>
+          <option value="codigo">Código</option>
+          <option value="cpfcnpj">CNPJ/CPF</option>
+          <option value="cidade">Cidade</option>
+          <option value="bairro">Bairro</option>
+          <option value="fone">Fone</option>
+        </select>
+      </div>
+
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+          <input x-ref="inputQ"
+                 :type="inputType()"
+                 name="q"
+                 value="{{ q }}"
+                 class="form-control"
+                 placeholder="Digite para buscar ou * para listar todos..."
+                 autocomplete="off"
+                 hx-get="{% url 'servicos:crm_buscar' %}"
+                 hx-trigger="keyup changed delay:400ms"
+                 hx-target="#tabela-wrapper"
+                 hx-include="[name='ref'],[name='q']">
+        </div>
+      </div>
+
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+        {% if q %}
+        <a href="{% url 'servicos:crm_lookup' %}" class="btn btn-sm btn-outline-secondary ms-1">Limpar</a>
+        {% endif %}
+      </div>
+
+      {# Legenda dos ícones #}
+      <div class="col text-end d-none d-md-block">
+        <span class="text-muted small me-2">
+          <i class="bi bi-exclamation-triangle-fill text-danger"></i> Inadimplente
+        </span>
+        <span class="text-muted small me-2">
+          <i class="bi bi-tools text-warning"></i> OS em andamento
+        </span>
+        <span class="text-muted small me-2">
+          <i class="bi bi-clock-history text-secondary"></i> Sem pedido
+        </span>
+        <span class="text-muted small">
+          <i class="bi bi-person-slash text-secondary"></i> Inativo
+        </span>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# Tabela de resultados #}
+<div id="tabela-wrapper">
+  {% include "servicos/partials/tabela_clientes.html" with col_defs=col_defs %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Passa col_defs via JS para o template não precisar de context_processor
+// A ordenação é gerenciada pelo HTMX diretamente nos th do partial
+</script>
+{% endblock %}
