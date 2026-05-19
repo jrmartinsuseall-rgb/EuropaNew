@@ -538,10 +538,8 @@ def subconta_inativar(request, pk):
 
 @admin_required
 def empresa_edit(request):
-    """Única empresa — cria se não existir."""
-    obj, _ = Empresa.objects.get_or_create(
-        pk=1, defaults={'razao': 'Minha Empresa', 'cnpj': '00.000.000/0000-00'}
-    )
+    empresa_id = request.session.get('empresa_id')
+    obj = get_object_or_404(Empresa, pk=empresa_id)
     if request.method == 'POST':
         form = EmpresaForm(request.POST, instance=obj)
         if form.is_valid():
