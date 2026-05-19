@@ -175,7 +175,7 @@ class EmpresaForm(forms.ModelForm):
     class Meta:
         model = Empresa
         fields = [
-            'razao', 'cnpj', 'ie', 'inativo',
+            'razao', 'apelido', 'cnpj', 'ie', 'inativo',
             'fone', 'celular', 'foneass', 'fonewhats', 'email',
             'endereco', 'numero', 'bairro', 'cep', 'cidade',
             'set_baixadireta', 'set_baixafat',
@@ -185,6 +185,7 @@ class EmpresaForm(forms.ModelForm):
         ]
         widgets = {
             'razao':    forms.TextInput(attrs={'class': CSS}),
+            'apelido':  forms.TextInput(attrs={'class': CSS}),
             'cnpj':     forms.TextInput(attrs={'class': CSS, 'data-mask': 'cnpj'}),
             'ie':       forms.TextInput(attrs={'class': CSS}),
             'fone':     forms.TextInput(attrs={'class': CSS, 'data-mask': 'fone'}),

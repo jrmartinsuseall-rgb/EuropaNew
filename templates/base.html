@@ -28,7 +28,7 @@
       </span>
       {% if empresa_atual %}
       <div class="text-truncate mt-1" style="font-size:.72rem; color:#6c757d; max-width:196px;" title="{{ empresa_atual.razao }}">
-        <i class="bi bi-building me-1"></i>{{ empresa_atual.razao }}
+        <i class="bi bi-building me-1"></i>{{ empresa_atual.apelido|default:empresa_atual.razao }}
       </div>
       {% endif %}
     </div>
@@ -338,7 +338,7 @@
       </nav>
       {% if empresa_atual %}
       <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-flex align-items-center gap-1" style="font-size:.72rem; font-weight:500;">
-        <i class="bi bi-building"></i> {{ empresa_atual.razao }}
+        <i class="bi bi-building"></i> {{ empresa_atual.apelido|default:empresa_atual.razao }}
       </span>
       {% endif %}
       <small class="text-muted">

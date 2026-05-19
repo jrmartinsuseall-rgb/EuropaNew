@@ -154,7 +154,7 @@
   {# ── Cabeçalho da empresa ── #}
   <div class="pdf-header">
     <div>
-      <div class="empresa-nome">{{ empresa.razao }}</div>
+      <div class="empresa-nome">{{ empresa.apelido|default:empresa.razao }}</div>
       <div class="empresa-info">
         {% if empresa.cnpj %}CNPJ: {{ empresa.cnpj }}{% endif %}
         {% if empresa.fone %} &nbsp;|&nbsp; Fone: {{ empresa.fone }}{% endif %}

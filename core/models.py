@@ -22,6 +22,7 @@ class Cidade(models.Model):
 class Empresa(models.Model):
     idempresa = models.AutoField(primary_key=True)
     razao = models.CharField('Razão Social', max_length=150)
+    apelido = models.CharField('Apelido', max_length=60, blank=True)
     cnpj = models.CharField('CNPJ', max_length=18, unique=True)
     ie = models.CharField('Insc. Estadual', max_length=20, blank=True)
     fone = models.CharField('Telefone', max_length=20, blank=True)
@@ -60,7 +61,7 @@ class Empresa(models.Model):
         verbose_name_plural = 'Empresas'
 
     def __str__(self):
-        return self.razao
+        return self.apelido or self.razao
 
 
 class Banco(models.Model):

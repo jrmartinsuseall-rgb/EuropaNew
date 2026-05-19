@@ -25,10 +25,14 @@
       <!-- Cabeçalho fixo -->
       <div class="card-header">
         <div class="row g-2 align-items-end">
-          <div class="col-md-6">
+          <div class="col-md-5">
             <label class="form-label">Razão Social <span class="text-danger">*</span></label>
             {{ form.razao }}
             {% if form.razao.errors %}<div class="text-danger small mt-1">{{ form.razao.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Apelido</label>
+            {{ form.apelido }}
           </div>
           <div class="col-md-3">
             <label class="form-label">CNPJ <span class="text-danger">*</span></label>

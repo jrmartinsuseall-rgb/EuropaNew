@@ -153,7 +153,7 @@
 <div class="assinatura-area">
   <div class="assinatura-bloco">
     <div class="assinatura-linha">
-      {{ empresa.razao }}
+      {{ empresa.apelido|default:empresa.razao }}
     </div>
     <div class="assinatura-label">Empresa — Responsável</div>
   </div>
