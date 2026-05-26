@@ -33,7 +33,7 @@ class EmpresaObrigatoriaMiddleware:
                 # ── 1. Empresa obrigatória ───────────────────────
                 if not request.session.get('empresa_id'):
                     if request.user.is_superuser:
-                        return redirect('core:selecionar_empresa')
+                        return redirect(f'/selecionar-empresa/?next={path}')
                     logout(request)
                     messages.warning(
                         request,

@@ -52,11 +52,11 @@ def login_view(request):
             except Exception:
                 pass
 
-        # Superusuário sem empresa na sessão → tela de seleção pós-login
-        next_url = request.GET.get('next') or 'home'
+        next_url = request.POST.get('next') or request.GET.get('next') or 'home'
         return redirect(next_url)
 
-    return render(request, 'login.html', {'form': form})
+    next_url = request.GET.get('next', '')
+    return render(request, 'login.html', {'form': form, 'next': next_url})
 
 
 @login_required
@@ -70,7 +70,8 @@ def selecionar_empresa(request):
         if form.is_valid():
             empresa = form.cleaned_data['empresa']
             request.session['empresa_id'] = empresa.pk
-            return redirect('home')
+            next_url = request.GET.get('next') or 'home'
+            return redirect(next_url)
     else:
         # Pré-seleciona a empresa atual se já houver uma na sessão
         empresa_id = request.session.get('empresa_id')

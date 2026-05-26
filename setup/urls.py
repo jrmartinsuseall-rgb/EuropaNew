@@ -16,6 +16,7 @@ urlpatterns = [
     path('servicos/',   include('servicos.urls')),
     path('estoque/',    include('estoque.urls')),
     path('vendas/',     include('vendas.urls')),
+    path('campo/',      include('campo.urls')),
     path('home/', home_redirect, name='home'),
     path('', root_redirect),
 ]

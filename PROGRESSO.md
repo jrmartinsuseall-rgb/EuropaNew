@@ -294,11 +294,11 @@ templates/
 
 ## Referências Rápidas
 
+### Desenvolvimento (Windows)
 ```
 Login:  http://127.0.0.1:8000/login/
 Admin:  http://127.0.0.1:8000/admin/
 User:   admin
-Senha:  #Salmos128
 ```
 
 ```bash
@@ -307,3 +307,43 @@ python manage.py check
 python manage.py makemigrations && python manage.py migrate
 python manage.py runserver
 ```
+
+### Produção
+```
+URL:    https://europanew.tech
+Admin:  https://europanew.tech/admin/
+SSH:    ssh root@2.24.105.144
+App:    /home/europa/app
+```
+
+**Atualizar o servidor após push no GitHub:**
+```bash
+ssh root@2.24.105.144
+
+cd /home/europa/app
+git pull
+source .venv/bin/activate
+python manage.py migrate
+python manage.py collectstatic --noinput
+chmod -R 755 /home/europa/app/staticfiles/
+systemctl restart europa
+```
+
+**Comandos úteis no servidor:**
+```bash
+# Ver logs em tempo real
+journalctl -u europa -f
+
+# Status dos serviços
+systemctl status europa
+systemctl status nginx
+
+# Reiniciar serviços
+systemctl restart europa
+systemctl restart nginx
+```
+
+**Notas de produção:**
+- `collectstatic` sempre seguido de `chmod -R 755 staticfiles/` (permissão Nginx)
+- Certificado SSL renovado automaticamente pelo Certbot (cron)
+- Banco: PostgreSQL 16, banco `europa_db`, usuário `europa_user`

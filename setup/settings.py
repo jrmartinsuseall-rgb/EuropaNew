@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'financeiro',
     'vendas',
     'servicos',
+    'campo',
 ]
 
 MIDDLEWARE = [
@@ -118,3 +119,6 @@ LOGOUT_REDIRECT_URL = '/login/'
 # Licença de Uso — chave HMAC usada para assinar/verificar chaves de licença
 # Defina LICENSE_SECRET_KEY no .env com uma string longa e aleatória em produção
 LICENSE_SECRET_KEY = config('LICENSE_SECRET_KEY', default='europa-licenca-insecure-mude-em-producao')
+
+# App Campo — token de autenticação para a API de integração
+CAMPO_API_TOKEN = config('CAMPO_API_TOKEN', default='europa-campo-dev')
