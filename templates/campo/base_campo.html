@@ -48,7 +48,7 @@
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo"><i class="bi bi-globe2 text-primary"></i> Europa<span>.</span>Campo</div>
+  <div class="topbar-logo"><i class="bi bi-globe2 text-primary"></i> {{ empresa_atual.apelido|default:empresa_atual.razao }}<span>.</span>Campo</div>
   <div class="d-flex align-items-center gap-3">
     <span style="font-size:13px; color: var(--muted);">
       <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
