@@ -1,0 +1,84 @@
+{% extends "campo/base_campo.html" %}
+{% block title %}Relatório Técnico{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'campo:detalhe' servico.pk %}"
+   class="text-decoration-none d-inline-flex align-items-center mb-3"
+   style="color: var(--muted); font-size:13px;">
+  <i class="bi bi-arrow-left me-1"></i> Voltar
+</a>
+
+{# ── Cabeçalho ── #}
+<div class="card-campo mb-3">
+  <div class="label-sm mb-1">Concluindo serviço</div>
+  <div class="fw-bold" style="font-size:16px;">{{ servico.tipo_atividade }}</div>
+  {% if servico.cliente_nome %}
+  <div style="font-size:13px; color:var(--muted);">
+    <i class="bi bi-building me-1"></i>{{ servico.cliente_nome }}
+    {% if servico.local %} · {{ servico.local }}{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  {# ── Laudo técnico ── #}
+  <div class="card-campo mb-3">
+    <div class="label-sm mb-2"><i class="bi bi-file-text me-1"></i>Laudo Técnico <span style="color:#f85149;">*</span></div>
+
+    {% if erro %}
+    <div class="mb-2 py-2 px-3" style="background:#2d0f0f; border:1px solid #f8514933; border-radius:8px; font-size:13px; color:#f85149;">
+      <i class="bi bi-exclamation-triangle me-1"></i>{{ erro }}
+    </div>
+    {% endif %}
+
+    <textarea name="laudo"
+              rows="5"
+              placeholder="Descreva o serviço executado, diagnóstico, procedimentos realizados e resultado final..."
+              style="width:100%; background:#0d1117; border:1px solid var(--border); border-radius:8px;
+                     color:var(--text); font-size:15px; padding:12px; resize:vertical; outline:none;"
+              onfocus="this.style.borderColor='#0d6efd'" onblur="this.style.borderColor='var(--border)'">{{ request.POST.laudo }}</textarea>
+  </div>
+
+  {# ── Materiais utilizados ── #}
+  {% if materiais %}
+  <div class="card-campo mb-3">
+    <div class="label-sm mb-3"><i class="bi bi-box me-1"></i>Materiais Utilizados</div>
+
+    {% for mat in materiais %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span style="font-size:14px;">{{ mat.item_descricao }}</span>
+        <span style="font-size:12px; color:var(--muted);">previsto: {{ mat.quantidade_prevista }}</span>
+      </div>
+      <input type="number"
+             name="qtd_{{ mat.pk }}"
+             step="0.001"
+             min="0"
+             placeholder="Qtd. utilizada"
+             value="{{ mat.quantidade_realizada|default:mat.quantidade_prevista }}"
+             style="width:100%; background:#0d1117; border:1px solid var(--border); border-radius:8px;
+                    color:var(--text); font-size:15px; height:48px; padding:0 14px; outline:none;"
+             onfocus="this.style.borderColor='#0d6efd'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Botão confirmar ── #}
+  <button type="submit"
+          style="width:100%; height:56px; background:#238636; color:#fff; border:none;
+                 border-radius:10px; font-size:16px; font-weight:600; cursor:pointer;">
+    <i class="bi bi-check-lg me-2"></i>Confirmar Conclusão
+  </button>
+
+  <a href="{% url 'campo:detalhe' servico.pk %}"
+     style="display:block; text-align:center; margin-top:12px; font-size:14px; color:var(--muted);">
+    Cancelar
+  </a>
+
+</form>
+
+{% endblock %}

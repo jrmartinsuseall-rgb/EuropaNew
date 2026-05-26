@@ -1,0 +1,225 @@
+{% extends "campo/base_campo.html" %}
+{% block title %}{{ servico.tipo_atividade }}{% endblock %}
+
+{% block content %}
+{% comment %}json_script: serializa com escape seguro (protege </script>, aspas, emojis){% endcomment %}
+{{ scripts|json_script:"scripts-data" }}
+
+{# ── Drawer de Scripts ── #}
+<div x-data="{
+       aberto: false,
+       copiado: null,
+       scripts: JSON.parse(document.getElementById('scripts-data').textContent),
+       copiar(i) {
+         navigator.clipboard.writeText(this.scripts[i].texto);
+         this.copiado = i;
+         setTimeout(() => this.copiado = null, 2000);
+       }
+     }">
+
+  {# Overlay #}
+  <div x-show="aberto" x-cloak
+       @click="aberto = false"
+       style="position:fixed;inset:0;background:#00000088;z-index:200;"></div>
+
+  {# Bottom sheet #}
+  <div x-show="aberto" x-cloak
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="transform translate-y-full"
+       x-transition:enter-end="transform translate-y-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="transform translate-y-0"
+       x-transition:leave-end="transform translate-y-full"
+       style="position:fixed;bottom:0;left:0;right:0;max-height:80vh;overflow-y:auto;
+              background:#161b22;border-top:1px solid #30363d;border-radius:16px 16px 0 0;
+              z-index:201;padding:20px 16px 32px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div style="font-size:15px;font-weight:600;color:#e6edf3;">
+        <i class="bi bi-chat-text me-2 text-primary"></i>Scripts de Mensagem
+      </div>
+      <button @click="aberto = false"
+              style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;padding:4px;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <p style="font-size:12px;color:#8b949e;margin-bottom:16px;">
+      Selecione um modelo. As variáveis já estão preenchidas com os dados do serviço.
+    </p>
+
+    <template x-if="scripts.length === 0">
+      <div style="text-align:center;color:#8b949e;padding:24px;font-size:13px;">
+        Nenhum script cadastrado. Configure no painel administrativo.
+      </div>
+    </template>
+
+    <template x-for="(s, i) in scripts" :key="i">
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:14px;margin-bottom:12px;">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span x-text="s.titulo" style="font-size:14px;font-weight:600;color:#e6edf3;"></span>
+          <button @click="copiar(i)"
+                  style="background:none;border:none;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;"
+                  :style="copiado === i ? 'color:#3fb950' : 'color:#8b949e'">
+            <i :class="copiado === i ? 'bi bi-check-lg' : 'bi bi-clipboard'"></i>
+          </button>
+        </div>
+
+        <pre x-text="s.texto"
+             style="font-size:12px;color:#8b949e;white-space:pre-wrap;margin:0 0 12px;
+                    font-family:inherit;line-height:1.5;"></pre>
+
+        <template x-if="s.wa_link">
+          <a :href="s.wa_link" target="_blank"
+             style="display:flex;align-items:center;justify-content:center;gap:8px;
+                    background:#1a3a24;border:1px solid #238636;border-radius:8px;
+                    color:#3fb950;font-size:14px;font-weight:600;padding:11px;
+                    text-decoration:none;">
+            <i class="bi bi-whatsapp"></i> Enviar no WhatsApp
+          </a>
+        </template>
+      </div>
+    </template>
+
+  </div>{# /bottom sheet #}
+
+{# Botão flutuante para abrir o drawer (só aparece se houver scripts) #}
+{% if scripts %}
+<button @click="aberto = true"
+        style="position:fixed;bottom:20px;right:16px;z-index:100;
+               background:#1a3a24;border:1px solid #238636;border-radius:50px;
+               color:#3fb950;font-size:14px;font-weight:600;padding:12px 18px;
+               box-shadow:0 4px 16px #00000066;cursor:pointer;display:flex;align-items:center;gap:8px;">
+  <i class="bi bi-chat-text fs-5"></i> Scripts
+</button>
+{% endif %}
+
+{# ── Voltar ── #}
+<a href="{% url 'campo:home' %}" class="text-decoration-none d-inline-flex align-items-center mb-3"
+   style="color: var(--muted); font-size:13px;">
+  <i class="bi bi-arrow-left me-1"></i> Voltar à fila
+</a>
+
+{# ── Cabeçalho ── #}
+<div class="card-campo mb-3">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <span class="badge-status bs-{{ servico.status }}">{{ servico.get_status_display }}</span>
+    {% if servico.os_codigo %}
+    <span style="font-size:12px; color:var(--muted);">{{ servico.os_codigo }}</span>
+    {% endif %}
+  </div>
+
+  <h6 class="fw-bold mb-3">{{ servico.tipo_atividade }}</h6>
+
+  <div class="row g-2" style="font-size:13px; color:var(--muted);">
+    {% if servico.cliente_nome %}
+    <div class="col-12"><i class="bi bi-building me-2"></i>{{ servico.cliente_nome }}</div>
+    {% endif %}
+    {% if servico.local %}
+    <div class="col-12"><i class="bi bi-geo-alt me-2"></i>{{ servico.local }}</div>
+    {% endif %}
+    {% if servico.ativo %}
+    <div class="col-12"><i class="bi bi-tools me-2"></i>{{ servico.ativo }}</div>
+    {% endif %}
+    {% if servico.data_prevista %}
+    <div class="col-12"><i class="bi bi-calendar3 me-2"></i>{{ servico.data_prevista|date:"d/m/Y" }}</div>
+    {% endif %}
+  </div>
+
+  {% if servico.descricao %}
+  <div class="mt-3 pt-3" style="border-top:1px solid var(--border); font-size:13px;">
+    {{ servico.descricao }}
+  </div>
+  {% endif %}
+
+  {% if wa_number %}
+  <div class="mt-3 pt-3" style="border-top:1px solid var(--border);">
+    <a href="https://wa.me/{{ wa_number }}" target="_blank"
+       style="display:flex; align-items:center; justify-content:center; gap:10px;
+              background:#1a3a24; border:1px solid #238636; border-radius:10px;
+              color:#3fb950; font-size:15px; font-weight:600; padding:13px;
+              text-decoration:none;">
+      <i class="bi bi-whatsapp fs-5"></i> Chamar no WhatsApp
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Materiais ── #}
+{% if servico.materiais.all %}
+<div class="card-campo mb-3">
+  <div class="label-sm mb-2"><i class="bi bi-box me-1"></i>Materiais</div>
+  {% for mat in servico.materiais.all %}
+  <div class="d-flex justify-content-between align-items-center py-1"
+       style="border-bottom:1px solid var(--border); font-size:13px;">
+    <span>{{ mat.item_descricao }}</span>
+    <span style="color:var(--muted);">{{ mat.quantidade_prevista }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Ações ── #}
+{% if acao or pode_pausar %}
+<div class="card-campo mb-3">
+  <div class="label-sm mb-3"><i class="bi bi-play-circle me-1"></i>Ação</div>
+
+  {% if acao %}
+  <form method="post" action="{% url 'campo:acao_status' servico.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="avancar">
+    {% if servico.status == 'PAUSADO' %}
+    <div class="mb-3">
+      <input type="text" name="observacao" class="form-control"
+             style="background:var(--bg-card2); border-color:var(--border); color:var(--text);"
+             placeholder="Motivo da retomada (opcional)">
+    </div>
+    {% endif %}
+    <button type="submit" class="btn-acao btn {{ acao.1|lower|slugify }}"
+            style="background:{% if acao.2 == 'btn-success' %}#238636{% elif acao.2 == 'btn-warning' %}#9e6a03{% elif acao.2 == 'btn-info' %}#0d5a9e{% else %}#21262d{% endif %}; color:#fff;">
+      <i class="bi bi-{% if acao.0 == 'CONCLUIDO' %}check-lg{% elif acao.0 == 'A_CAMINHO' %}geo-alt{% elif acao.0 == 'EM_EXECUCAO' %}play-fill{% else %}arrow-clockwise{% endif %} me-2"></i>
+      {{ acao.1 }}
+    </button>
+  </form>
+  {% endif %}
+
+  {% if pode_pausar %}
+  <form method="post" action="{% url 'campo:acao_status' servico.pk %}" class="mt-2">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="pausar">
+    <div class="mb-2">
+      <input type="text" name="observacao" class="form-control"
+             style="background:var(--bg-card2); border-color:var(--border); color:var(--text);"
+             placeholder="Motivo da pausa (opcional)">
+    </div>
+    <button type="submit" class="btn-acao"
+            style="background:#3d1f00; color:#f0883e; border:1px solid #f0883e33;">
+      <i class="bi bi-pause-fill me-2"></i>Pausar
+    </button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Linha do tempo ── #}
+{% if timeline %}
+<div class="card-campo">
+  <div class="label-sm mb-3"><i class="bi bi-clock-history me-1"></i>Linha do tempo</div>
+  {% for t in timeline %}
+  <div class="timeline-item">
+    <div class="fw-semibold" style="font-size:13px;">{{ t.get_evento_display }}</div>
+    <div style="font-size:12px; color:var(--muted);">
+      {{ t.timestamp|date:"d/m/Y H:i" }}
+      {% if t.user %} · {{ t.user.get_full_name|default:t.user.username }}{% endif %}
+    </div>
+    {% if t.observacao %}
+    <div style="font-size:12px; color:var(--muted); font-style:italic;">{{ t.observacao }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+</div>{# /x-data drawer #}
+{% endblock %}

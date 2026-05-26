@@ -1,0 +1,84 @@
+{% extends "campo/base_campo.html" %}
+{% block title %}Fila{% endblock %}
+
+{% block content %}
+
+{# ── Contadores ── #}
+<div class="card-campo mb-3">
+  <div class="row text-center g-0">
+    <div class="col-4" style="border-right: 1px solid var(--border);">
+      <div class="contador text-warning">{{ pendentes_hoje }}</div>
+      <div class="label-sm mt-1">Hoje</div>
+    </div>
+    <div class="col-4" style="border-right: 1px solid var(--border);">
+      <div class="contador" style="color:#58a6ff;">{{ total_fila }}</div>
+      <div class="label-sm mt-1">Na fila</div>
+    </div>
+    <div class="col-4">
+      <div class="contador" style="color:#3fb950;">{{ total_concluidos }}</div>
+      <div class="label-sm mt-1">Concluídos</div>
+    </div>
+  </div>
+</div>
+
+{# ── Abas ── #}
+<div x-data="{ aba: 'fila' }">
+
+  <div class="d-flex mb-3" style="border-bottom: 1px solid var(--border);">
+    <button @click="aba = 'fila'"
+            :style="aba === 'fila' ? 'border-bottom: 2px solid #58a6ff; color:#58a6ff;' : 'color: var(--muted);'"
+            class="flex-fill py-2 bg-transparent border-0 fw-semibold" style="font-size:14px; cursor:pointer;">
+      <i class="bi bi-list-task me-1"></i>Fila Ativa
+    </button>
+    <button @click="aba = 'concluidos'"
+            :style="aba === 'concluidos' ? 'border-bottom: 2px solid #3fb950; color:#3fb950;' : 'color: var(--muted);'"
+            class="flex-fill py-2 bg-transparent border-0 fw-semibold" style="font-size:14px; cursor:pointer;">
+      <i class="bi bi-check-circle me-1"></i>Concluídos
+    </button>
+  </div>
+
+  {# ── Aba: Fila Ativa ── #}
+  <div x-show="aba === 'fila'" x-cloak>
+
+    {% if destaque %}
+    <div class="label-sm mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Agora</div>
+    {% include "campo/partials/card_atividade.html" with servico=destaque %}
+    {% endif %}
+
+    {% if ativos %}
+    {% if destaque %}<div class="label-sm mb-2 mt-3"><i class="bi bi-list-ul me-1"></i>Fila completa</div>{% endif %}
+    {% for srv in ativos %}
+      {% if not destaque or srv.pk != destaque.pk %}
+        {% include "campo/partials/card_atividade.html" with servico=srv %}
+      {% endif %}
+    {% endfor %}
+    {% else %}
+    <div class="card-campo text-center py-4">
+      <i class="bi bi-check-circle-fill text-success fs-3 mb-2 d-block"></i>
+      <div class="fw-semibold">Fila vazia</div>
+      <div style="font-size:13px; color:var(--muted);">Nenhuma atividade pendente.</div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ── Aba: Concluídos ── #}
+  <div x-show="aba === 'concluidos'" x-cloak>
+
+    {% if concluidos %}
+    {% for srv in concluidos %}
+      {% include "campo/partials/card_atividade.html" with servico=srv %}
+    {% endfor %}
+    {% else %}
+    <div class="card-campo text-center py-4">
+      <i class="bi bi-hourglass text-secondary fs-3 mb-2 d-block"></i>
+      <div class="fw-semibold">Nenhum concluído</div>
+      <div style="font-size:13px; color:var(--muted);">Os serviços finalizados aparecerão aqui.</div>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>{# /x-data #}
+
+{% endblock %}
