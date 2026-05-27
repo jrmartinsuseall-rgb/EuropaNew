@@ -1,9 +1,12 @@
 from django.urls import path
-from campo.views import api, tecnico
+from campo.views import api, gestor, tecnico
 
 app_name = 'campo'
 
 urlpatterns = [
+    # Gestor — painel de monitoramento
+    path('gestor/monitoramento/', gestor.monitoramento, name='gestor_monitoramento'),
+
     # Técnico — interface mobile
     path('',                          tecnico.home,        name='home'),
     path('atividade/<int:pk>/',       tecnico.detalhe,     name='detalhe'),

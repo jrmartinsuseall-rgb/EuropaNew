@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitoramento de Campo{% endblock %}
+
+{% block breadcrumb %}
+  <span class="text-muted">Serviços</span>
+  <span class="mx-1 text-muted">/</span>
+  <span>Monitoramento de campo</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="mb-0">Monitoramento de campo</h5>
+    <small class="text-muted">Hoje — {{ hoje|date:"d/m/Y" }}</small>
+  </div>
+  <a href="{% url 'campo:gestor_monitoramento' %}"
+     class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+    <i class="bi bi-arrow-clockwise"></i> Atualizar
+  </a>
+</div>
+
+{# KPIs #}
+<div class="row g-2 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-light h-100">
+      <div class="card-body py-3">
+        <div class="text-muted small mb-1">Técnicos em campo</div>
+        <div class="fs-3 fw-semibold">{{ kpi_em_campo }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-light h-100">
+      <div class="card-body py-3">
+        <div class="text-muted small mb-1">Em execução agora</div>
+        <div class="fs-3 fw-semibold">{{ kpi_em_execucao }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-light h-100">
+      <div class="card-body py-3">
+        <div class="text-muted small mb-1">Concluídas hoje</div>
+        <div class="fs-3 fw-semibold text-success">{{ kpi_concluidas }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-light h-100">
+      <div class="card-body py-3">
+        <div class="text-muted small mb-1">Em atraso</div>
+        <div class="fs-3 fw-semibold {% if kpi_em_atraso > 0 %}text-danger{% endif %}">
+          {{ kpi_em_atraso }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="text-uppercase text-muted fw-semibold small mb-2" style="letter-spacing:.06em;">
+  Equipe em campo
+</p>
+
+{# Grid de técnicos #}
+<div class="row g-3 mb-4">
+  {% for card in cards %}
+  <div class="col-12 col-md-6">
+    <div class="card h-100 {% if card.atrasado %}border-danger{% endif %}">
+      <div class="card-body">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <div class="rounded-circle d-flex align-items-center justify-content-center fw-semibold"
+               style="width:38px;height:38px;background:#dbeafe;color:#1d4ed8;font-size:13px;flex-shrink:0;">
+            {{ card.iniciais }}
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold" style="font-size:14px;">{{ card.nome }}</div>
+            {% if card.atividade_atual %}
+              {% if card.atrasado %}
+                <span class="badge rounded-pill" style="font-size:10px;background:#fee2e2;color:#991b1b;">Atrasado</span>
+              {% elif card.atividade_atual.status == 'EM_EXECUCAO' %}
+                <span class="badge rounded-pill" style="font-size:10px;background:#d1fae5;color:#065f46;">Em execução</span>
+              {% elif card.atividade_atual.status == 'A_CAMINHO' %}
+                <span class="badge rounded-pill" style="font-size:10px;background:#fef3c7;color:#92400e;">A caminho</span>
+              {% elif card.atividade_atual.status == 'PAUSADO' %}
+                <span class="badge rounded-pill" style="font-size:10px;background:#f3f4f6;color:#374151;">Pausado</span>
+              {% else %}
+                <span class="badge rounded-pill bg-secondary" style="font-size:10px;">{{ card.atividade_atual.get_status_display }}</span>
+              {% endif %}
+            {% else %}
+              <span class="badge rounded-pill bg-light text-muted" style="font-size:10px;">Sem atividade ativa</span>
+            {% endif %}
+          </div>
+          <span class="fw-semibold {% if card.atrasado %}text-danger{% endif %}"
+                style="font-size:15px;white-space:nowrap;">
+            {{ card.duracao_display }}
+          </span>
+        </div>
+
+        <div class="border-top pt-2">
+          {% if card.atividade_atual %}
+            <div class="text-muted mb-1" style="font-size:11px;">Atividade atual</div>
+            <div class="mb-2" style="font-size:13px;">
+              {{ card.atividade_atual.tipo_atividade }}
+              {% if card.atividade_atual.cliente_nome %}
+                — {{ card.atividade_atual.cliente_nome }}
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="text-muted mb-2" style="font-size:13px;">Sem atividade em andamento</div>
+          {% endif %}
+          <div class="d-flex justify-content-between text-muted" style="font-size:11px;">
+            <span><i class="bi bi-check-lg"></i> {{ card.concluidas_hoje }} concluída{{ card.concluidas_hoje|pluralize }}</span>
+            <span>{{ card.pendentes }} pendente{{ card.pendentes|pluralize }} na fila</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="alert alert-light text-center text-muted">
+      <i class="bi bi-calendar-x me-2"></i>Nenhum técnico com atividades para hoje.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Gráfico de produtividade #}
+{% if cards %}
+<p class="text-uppercase text-muted fw-semibold small mb-2" style="letter-spacing:.06em;">
+  Produtividade do dia
+</p>
+<div class="card border-0">
+  <div class="card-body">
+    <div class="text-muted small mb-3">Atividades concluídas por técnico</div>
+    <div style="position:relative;width:100%;height:180px;">
+      <canvas id="chartProdutividade"></canvas>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if cards %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  new Chart(document.getElementById('chartProdutividade'), {
+    type: 'bar',
+    data: {
+      labels: {{ grafico_labels|safe }},
+      datasets: [{
+        data: {{ grafico_dados|safe }},
+        backgroundColor: '#4da8e0',
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#667085', font: { size: 12 } } },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#667085', font: { size: 12 }, stepSize: 1 },
+          grid: { color: '#f2f4f7' }
+        }
+      }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}
