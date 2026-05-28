@@ -16,6 +16,7 @@ from cadastros.models import ClienteFornecedor, HistoricoCliente, TelefoneAdicio
 from financeiro.models import ContaReceber, ContaPagar
 from vendas.models import Pedido, ItemPedido, ParcelaPedido
 from estoque.models import Requisicao, ItemRequisicao
+from campo.services import criar_servicos_roteiro
 from .models import (ContatoCliente, TeleVenda, ItemTeleVenda, ParcelaTeleVenda,
                      Roteiro, OSRoteiro)
 from .forms import ContatoForm, TelefoneForm, TeleVendaForm
@@ -722,6 +723,63 @@ def roteiro_create(request):
                 roteiro.idrequisicao = req.pk
                 roteiro.requisicaook = True
                 roteiro.save(update_fields=['idrequisicao', 'requisicaook'])
+
+                # ── Integração campo: cria Servico para cada OS do roteiro ──
+                for osrot in roteiro.ordens_servico.select_related(
+                    'telvenda', 'telvenda__cliente', 'cliente'
+                ).all():
+                    tv = osrot.telvenda
+                    if not tv:
+                        continue
+
+                    # osrot.cliente armazena o técnico (tipocliforemp='E') quando atribuído
+                    tecnico = (
+                        osrot.cliente
+                        if osrot.cliente and osrot.cliente.tipocliforemp == 'E'
+                        else None
+                    )
+                    cliente = tv.cliente
+
+                    local_parts = [
+                        getattr(cliente, 'endereco', ''),
+                        getattr(cliente, 'bairro', ''),
+                        getattr(cliente, 'nomecidade', ''),
+                    ]
+                    local = ', '.join(p for p in local_parts if p)
+
+                    materiais = []
+                    for it in tv.itens.select_related('item').all():
+                        descricao = it.identificacao or (
+                            it.item.descricao if it.item else ''
+                        )
+                        if not descricao:
+                            continue
+                        materiais.append({
+                            'item_id':        it.item_id,
+                            'item_codigo':    it.identificacao or '',
+                            'item_descricao': descricao,
+                            'quantidade':     float(it.quantidade),
+                        })
+
+                    criar_servicos_roteiro({
+                        'roteiro_id': roteiro.pk,
+                        'os_codigo':  str(tv.numero),
+                        'tecnicos': [{
+                            'id':    tecnico.pk,
+                            'nome':  tecnico.razao or tecnico.nome or '',
+                            'papel': 'RESPONSAVEL',
+                        }] if tecnico else [],
+                        'servicos': [{
+                            'tipo_atividade': (tv.atend_obs or 'Assistência Técnica')[:100],
+                            'cliente_id':     cliente.pk if cliente else None,
+                            'cliente_nome':   (cliente.razao or cliente.nome or '') if cliente else '',
+                            'local':          local,
+                            'ativo':          '',
+                            'descricao':      tv.atend_obs or '',
+                            'data_prevista':  tv.dataprevisao.isoformat() if tv.dataprevisao else None,
+                            'materiais':      materiais,
+                        }],
+                    })
 
             messages.success(request, f'Roteiro #{roteiro.pk} criado com {alocadas} OS(s).')
             return redirect('servicos:roteiro_detalhe', pk=roteiro.pk)
