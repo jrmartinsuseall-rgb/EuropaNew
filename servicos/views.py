@@ -1052,7 +1052,14 @@ def roteiro_cancelar(request, pk):
                     tv.save(update_fields=['idassroteiro'])
             roteiro.status = 'C'
             roteiro.save(update_fields=['status'])
-        messages.success(request, f'Roteiro #{roteiro.pk} cancelado — OS liberadas.')
+
+            # Cancela os Servicos de campo vinculados que ainda estão agendados
+            ServicoCampo.objects.filter(
+                roteiro_id=roteiro.pk,
+                status='AGENDADO',
+            ).update(status='CANCELADO')
+
+        messages.success(request, f'Roteiro #{roteiro.pk} cancelado — OS e serviços de campo liberados.')
         return redirect('servicos:roteiro_list')
 
     return redirect('servicos:roteiro_detalhe', pk=pk)
