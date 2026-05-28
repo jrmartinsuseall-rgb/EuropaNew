@@ -92,6 +92,16 @@
   </div>
 </div>
 
+{% if em_roteiro %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3">
+  <i class="bi bi-lock-fill text-warning fs-5"></i>
+  <span>
+    <strong>Roteiro #{{ os.idassroteiro }} gerado</strong> — edição e movimentação não permitidas.
+    <a href="{% url 'servicos:roteiro_detalhe' os.idassroteiro %}" class="alert-link ms-1">Ver roteiro</a>
+  </span>
+</div>
+{% endif %}
+
 <div class="row g-3">
   <div class="col-lg-8">
 

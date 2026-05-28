@@ -468,14 +468,17 @@ def os_detalhe(request, pk):
     if standalone:
         grupos.append({'servico': None, 'filhos': standalone})
 
+    em_roteiro = os.idassroteiro != 0
+
     return render(request, 'servicos/os_detalhe.html', {
-        'os':       os,
-        'itens':    itens_qs,
-        'grupos':   grupos,
-        'parcelas': os.parcelas.all(),
-        'vendedor': vendedor,
-        'tecnico':  tecnico,
-        'bloqueada': os.status in ('F', 'C'),
+        'os':        os,
+        'itens':     itens_qs,
+        'grupos':    grupos,
+        'parcelas':  os.parcelas.all(),
+        'vendedor':  vendedor,
+        'tecnico':   tecnico,
+        'em_roteiro': em_roteiro,
+        'bloqueada': os.status in ('F', 'C') or em_roteiro,
     })
 
 
@@ -483,6 +486,10 @@ def os_detalhe(request, pk):
 def os_cancelar(request, pk):
     empresa_id = request.session.get('empresa_id')
     os = get_object_or_404(TeleVenda, pk=pk, empresa_id=empresa_id)
+
+    if os.idassroteiro != 0:
+        messages.error(request, f'Roteiro #{os.idassroteiro} gerado — movimento não permitido.')
+        return redirect('servicos:os_detalhe', pk=pk)
 
     if os.status in ('F', 'C'):
         messages.error(request, 'Esta OS não pode ser cancelada.')
@@ -506,6 +513,10 @@ def os_cancelar(request, pk):
 def os_reagendar(request, pk):
     empresa_id = request.session.get('empresa_id')
     os = get_object_or_404(TeleVenda, pk=pk, empresa_id=empresa_id)
+
+    if os.idassroteiro != 0:
+        messages.error(request, f'Roteiro #{os.idassroteiro} gerado — movimento não permitido.')
+        return redirect('servicos:os_detalhe', pk=pk)
 
     if os.status in ('F', 'C'):
         messages.error(request, 'Esta OS não pode ser reagendada.')
