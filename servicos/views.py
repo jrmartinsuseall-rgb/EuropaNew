@@ -17,6 +17,7 @@ from financeiro.models import ContaReceber, ContaPagar
 from vendas.models import Pedido, ItemPedido, ParcelaPedido
 from estoque.models import Requisicao, ItemRequisicao
 from campo.services import criar_servicos_roteiro
+from campo.models import Servico as ServicoCampo
 from .models import (ContatoCliente, TeleVenda, ItemTeleVenda, ParcelaTeleVenda,
                      Roteiro, OSRoteiro)
 from .forms import ContatoForm, TelefoneForm, TeleVendaForm
@@ -1023,6 +1024,23 @@ def roteiro_cancelar(request, pk):
 
     if roteiro.status in ('F', 'C'):
         messages.error(request, 'Este roteiro não pode ser cancelado.')
+        return redirect('servicos:roteiro_detalhe', pk=pk)
+
+    # Bloqueia cancelamento se algum serviço de campo já foi iniciado
+    iniciados = ServicoCampo.objects.filter(
+        roteiro_id=roteiro.pk
+    ).exclude(
+        status__in=['AGENDADO', 'CANCELADO']
+    ).select_related()
+
+    if iniciados.exists():
+        nomes = ', '.join(
+            f'{s.tipo_atividade} ({s.get_status_display()})' for s in iniciados[:3]
+        )
+        messages.error(
+            request,
+            f'Cancelamento bloqueado — serviço(s) já iniciado(s) em campo: {nomes}.'
+        )
         return redirect('servicos:roteiro_detalhe', pk=pk)
 
     if request.method == 'POST':
